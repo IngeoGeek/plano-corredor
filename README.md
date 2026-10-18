@@ -15,3 +15,8 @@ Página publicada: https://ingeogeek.github.io/plano-corredor/
 
 Relieve reconstruido a partir de las curvas de nivel del proyecto (c/50 m) en una rejilla de 30 m.
 Coordenadas: MAGNA-SIRGAS 2018 / Origen-Nacional (EPSG:9377). Elaboró: Msc. Ing. Osney Izaquita.
+
+## Versión 2 (carpeta v2/)
+Página: https://ingeogeek.github.io/plano-corredor/v2/ (y v2/ver.html para celulares sin ARCore).
+Agrega el cambio entre el plano 2D (PDF en mosaicos de zoom profundo, OpenSeadragon, BSD-3) y la maqueta 3D,
+el GPS sobre ambas vistas, materiales mates y luz moderada. No modifica los archivos de la versión 1.
