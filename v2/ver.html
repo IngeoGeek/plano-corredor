@@ -265,8 +265,19 @@ addEventListener('resize', pedirDespeje);
 
 /* ---------- Pantalla completa ---------- */
 const btnFull = $('#btn-full');
+let scrollPrevio = 0;
+function volverAlInicio(){   // al salir de pantalla completa: misma posición de la página y encuadre inicial
+  const y = scrollPrevio, ir = () => scrollTo({top: y, behavior: 'instant'});
+  ir(); requestAnimationFrame(ir); setTimeout(ir, 150); setTimeout(ir, 450);
+  mv.cameraOrbit = mv.getAttribute('camera-orbit'); mv.cameraTarget = 'auto auto auto'; mv.fieldOfView = mv.getAttribute('field-of-view'); mv.jumpCameraToGoal();
+  if (visor2d) setTimeout(() => visor2d.viewport.goHome(true), 200);
+  setTimeout(pedirDespeje, 300);
+}
 function marcarFull(on){
+  const antes = stage.classList.contains('full');
+  if (on && !antes) scrollPrevio = scrollY;
   stage.classList.toggle('full', on); document.body.classList.toggle('bloqueo', on);
+  if (!on && antes) volverAlInicio();
   btnFull.setAttribute('aria-pressed', String(on)); btnFull.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
   $('#ico-full').innerHTML = on ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
   mv.setAttribute('touch-action', on ? 'none' : 'pan-y');
