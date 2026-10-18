@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plano Corredor Carbonífero AR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js"></script>
+<style>
+/* Layout: visor a pantalla casi completa con una ficha técnica tipo rótulo de plano debajo */
+:root{
+  --bg:#eef0ec; --surface:#ffffff; --ink:#1d2621; --muted:#5b6660; --rule:#c9cfc9;
+  --accent:#9a5a1c; --accent-ink:#ffffff; --stage:#dfe3dc;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1c2320; --ink:#e7ebe6; --muted:#9aa59f; --rule:#34403a;
+  --accent:#d9944f; --accent-ink:#1a1209; --stage:#202825; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1c2320; --ink:#e7ebe6; --muted:#9aa59f; --rule:#34403a;
+  --accent:#d9944f; --accent-ink:#1a1209; --stage:#202825; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 24px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4vw,2.1rem);letter-spacing:.01em;line-height:1.1;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:0}
+.stage{position:relative;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--stage)}
+model-viewer{width:100%;height:min(68vh,620px);min-height:340px;background:var(--stage);--poster-color:var(--stage)}
+.ar-btn{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:12px 22px;
+  font:600 15px/1 var(--body);display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 2px 10px rgb(0 0 0 / .18)}
+.ar-btn:focus-visible,.seg button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.no-ar{position:absolute;left:12px;right:12px;bottom:12px;background:var(--surface);color:var(--muted);border:1px solid var(--rule);
+  border-radius:8px;padding:10px 12px;font-size:13px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.label{font-family:var(--display);font-weight:500;text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--ink);font:500 14px/1 var(--body);padding:10px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+.ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
+.ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.pasos{margin:0;padding-left:1.2em;color:var(--muted);max-width:68ch}
+.pasos li{margin-block:2px}
+@media (prefers-reduced-motion: reduce){model-viewer{--progress-bar-height:0}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Corredor Carbonífero de Santander</h1>
+    <p class="sub">Plano general 90 × 60 cm · Cimitarra – Landázuri – Vélez</p>
+  </header>
+
+  <div class="stage">
+    <model-viewer id="mv"
+      src="plano_90x60.glb" ios-src="plano_90x60.usdz" poster="poster.jpg"
+      alt="Plano general del corredor carbonífero de Santander como lámina de 90 por 60 centímetros"
+      ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" ar-placement="wall"
+      camera-controls touch-action="pan-y" shadow-intensity="0.6" exposure="1" tone-mapping="neutral"
+      camera-orbit="0deg 84deg 1.2m" min-camera-orbit="auto auto 0.5m" max-camera-orbit="auto auto 3m"
+      interaction-prompt="auto">
+      <button slot="ar-button" class="ar-btn" type="button">Ver en tu espacio · tamaño real</button>
+      <div slot="ar-failure" class="no-ar">No se pudo iniciar la realidad aumentada en este equipo.</div>
+    </model-viewer>
+    <p class="no-ar" id="noar" hidden>En computador el plano se puede girar y acercar con el ratón. Para verlo en tamaño real, abre esta página en el celular: Chrome en Android o Safari en iPhone.</p>
+  </div>
+
+  <div class="controls">
+    <span class="label">Colocar en</span>
+    <div class="seg" role="group" aria-label="Superficie para la realidad aumentada">
+      <button id="btn-wall" type="button" aria-pressed="true">Pared</button>
+      <button id="btn-floor" type="button" aria-pressed="false">Piso o mesa</button>
+    </div>
+  </div>
+
+  <dl class="ficha">
+    <div><dt>Tamaño en RA</dt><dd>90,0 × 60,0 cm (fijo)</dd></div>
+    <div><dt>Escala del plano</dt><dd>1:65 000</dd></div>
+    <div><dt>Sistema</dt><dd>MAGNA-SIRGAS 2018 · Origen-Nacional</dd></div>
+    <div><dt>Elaboró</dt><dd>Msc. Ing. Osney Izaquita</dd></div>
+  </dl>
+
+  <ol class="pasos">
+    <li>Toca «Ver en tu espacio» y apunta la cámara a una pared o al piso hasta que el teléfono la reconozca.</li>
+    <li>El plano aparece a 90 × 60 cm, igual que impreso. Arrástralo para moverlo y gíralo con dos dedos.</li>
+    <li>Acércate con el teléfono para leer convenciones y rótulo.</li>
+  </ol>
+</div>
+
+<script>
+  const mv = document.getElementById('mv');
+  const wall = document.getElementById('btn-wall'), floor = document.getElementById('btn-floor');
+  function place(where){
+    mv.setAttribute('ar-placement', where);
+    wall.setAttribute('aria-pressed', String(where === 'wall'));
+    floor.setAttribute('aria-pressed', String(where === 'floor'));
+  }
+  wall.addEventListener('click', () => place('wall'));
+  floor.addEventListener('click', () => place('floor'));
+  customElements.whenDefined('model-viewer').then(() => {
+    mv.addEventListener('load', () => { document.getElementById('noar').hidden = !!mv.canActivateAR; });
+  });
+</script>
+</body>
+</html>

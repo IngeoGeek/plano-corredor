@@ -1,0 +1,19 @@
+PLANO EN REALIDAD AUMENTADA - PUBLICACIÓN GRATUITA EN GITHUB PAGES
+
+Contenido:
+  index.html        página del visor (model-viewer de Google)
+  plano_90x60.glb   modelo 3D para Android y navegadores (90 x 60 cm reales)
+  plano_90x60.usdz  modelo 3D para iPhone/iPad (AR Quick Look)
+  poster.jpg        imagen que se muestra mientras carga
+
+Pasos:
+ 1. Crear una cuenta gratuita en github.com.
+ 2. New repository -> nombre corto (ej. plano-corredor) -> Public -> Create.
+ 3. "uploading an existing file" -> arrastrar los 4 archivos -> Commit changes.
+ 4. Settings -> Pages -> Source: Deploy from a branch -> Branch: main, carpeta / (root) -> Save.
+ 5. En 1-3 minutos la página queda en https://USUARIO.github.io/plano-corredor/
+ 6. Abrir esa dirección en el celular y probar el botón "Ver en tu espacio".
+ 7. Generar el QR con esa dirección exacta (QR estático, corrección de errores M o Q)
+    e insertarlo en el rótulo del plano en QGIS (Diseño -> Añadir imagen). Tamaño mínimo impreso: 2,5 x 2,5 cm.
+
+Para cambiar el plano: reemplazar los archivos .glb y .usdz con el mismo nombre. La URL y el QR no cambian.
