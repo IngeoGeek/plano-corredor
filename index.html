@@ -46,6 +46,7 @@ model-viewer{width:100%;height:min(68vh,620px);min-height:340px;background:var(-
 .ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
 .ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
 .ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.alt{margin:0;color:var(--muted)} .alt a,.no-ar a{color:var(--accent)}
 .pasos{margin:0;padding-left:1.2em;color:var(--muted);max-width:68ch}
 .pasos li{margin-block:2px}
 @media (prefers-reduced-motion: reduce){model-viewer{--progress-bar-height:0}}
@@ -71,7 +72,7 @@ model-viewer{width:100%;height:min(68vh,620px);min-height:340px;background:var(-
       <button slot="ar-button" class="ar-btn" type="button">Ver en tu espacio · tamaño real</button>
       <div slot="ar-failure" class="no-ar">No se pudo iniciar la realidad aumentada en este equipo.</div>
     </model-viewer>
-    <p class="no-ar" id="noar" hidden>En computador el plano se puede girar y acercar con el ratón. Para verlo en tamaño real, abre esta página en el celular: Chrome en Android o Safari en iPhone.</p>
+    <p class="no-ar" id="noar" hidden>Este equipo no admite la realidad aumentada sin marcador. Gira el plano con el dedo o el ratón, o usa el <a href="ra.html">modo con marcador</a>, que funciona en cualquier celular con cámara.</p>
   </div>
 
   <div class="controls">
@@ -81,6 +82,8 @@ model-viewer{width:100%;height:min(68vh,620px);min-height:340px;background:var(-
       <button id="btn-floor" type="button" aria-pressed="false">Piso o mesa</button>
     </div>
   </div>
+
+  <p class="alt">¿No aparece el botón «Ver en tu espacio» en tu celular? Usa el <a href="ra.html">modo con marcador</a> (<a href="marcador_10cm_carta.pdf">hoja para imprimir</a>).</p>
 
   <dl class="ficha">
     <div><dt>Tamaño en RA</dt><dd>90,0 × 60,0 cm (fijo)</dd></div>

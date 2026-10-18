@@ -17,3 +17,11 @@ Pasos:
     e insertarlo en el rótulo del plano en QGIS (Diseño -> Añadir imagen). Tamaño mínimo impreso: 2,5 x 2,5 cm.
 
 Para cambiar el plano: reemplazar los archivos .glb y .usdz con el mismo nombre. La URL y el QR no cambian.
+
+MODO CON MARCADOR (cualquier celular con cámara, sin ARCore)
+  ra.html                    página que abre la cámara (AR.js + A-Frame, en lib/)
+  marcador_10cm_carta.pdf    hoja para imprimir al 100 %: el cuadro negro debe medir 10 x 10 cm
+  marcador_10cm.png          el mismo marcador a 300 ppp, para insertarlo en el rótulo del plano
+  marcador.patt              patrón que reconoce la cámara (no editar)
+El QR del marcador abre directamente ra.html. Si el marcador se imprime a otro tamaño, el plano
+se verá proporcionalmente más grande o más pequeño (10 cm de marcador = 90 x 60 cm de plano).
