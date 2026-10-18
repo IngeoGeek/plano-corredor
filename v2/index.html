@@ -59,6 +59,7 @@ model-viewer.vista{--poster-color:var(--stage)}
 #aviso.ok{color:var(--ink)}
 .acciones{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
 .lnk{background:none;border:0;padding:0;color:var(--accent);font:500 15px var(--body);text-decoration:underline;cursor:pointer}
+.lnk:disabled{color:var(--ink);text-decoration:none;cursor:default}
 a{color:var(--accent)}
 .alt{margin:0;color:var(--muted)}
 .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:0}
@@ -461,14 +462,22 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'Mac
 
 /* ---------- Sin internet ---------- */
 const btnOff = $('#btn-offline');
-if ('serviceWorker' in navigator){
+function marcarGuardado(fechaIso){
+  const f = fechaIso ? new Date(fechaIso).toLocaleDateString('es-CO', {day: 'numeric', month: 'short'}) : '';
+  btnOff.textContent = `Guardado${f ? ' el ' + f : ''}: disponible sin internet ✓`; btnOff.disabled = true;
+}
+async function revisarGuardado(){   // ¿ya hay una copia completa en este celular?
+  try { const r = await caches.match('marca-guardado-completo'); if (r) marcarGuardado(await r.text()); } catch (e) {}
+}
+if ('serviceWorker' in navigator && 'caches' in window){
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  revisarGuardado(); navigator.serviceWorker.ready.then(() => setTimeout(revisarGuardado, 800));
   navigator.serviceWorker.addEventListener('message', (e) => {
-    if (e.data === 'guardado'){ btnOff.textContent = 'Guardado: disponible sin internet'; btnOff.disabled = true; avisar('Listo. La próxima vez esta página abre aunque no tengas conexión.', true); }
-    if (e.data === 'error'){ btnOff.textContent = 'Guardar para usar sin internet'; avisar('No se pudo guardar todo. Inténtalo de nuevo con buena conexión.'); }
+    if (e.data === 'guardado'){ marcarGuardado(new Date().toISOString()); avisar('Listo. La próxima vez esta página abre aunque no tengas conexión.', true); }
+    if (e.data === 'error'){ btnOff.disabled = false; btnOff.textContent = 'Guardar para usar sin internet'; avisar('No se pudo guardar todo. Inténtalo de nuevo con buena conexión.'); }
   });
   btnOff.addEventListener('click', async () => {
-    btnOff.textContent = 'Guardando… (unos 40 MB)';
+    btnOff.disabled = true; btnOff.textContent = 'Guardando… (unos 50 MB, no cierres la página)';
     const reg = await navigator.serviceWorker.ready; reg.active.postMessage('guardarTodo');
   });
 } else { btnOff.hidden = true; }
