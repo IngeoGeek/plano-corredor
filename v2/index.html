@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#014f7d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icono-192.png">
 <title>Corredor Carbonífero de Santander · Plano 2D y maqueta 3D</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script type="module" src="../lib/model-viewer.min.js"></script>
@@ -161,6 +163,7 @@ a{color:var(--accent)}
 
   <div class="acciones">
     <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
+    <button class="lnk" id="btn-instalar" type="button" hidden>Instalar como aplicación</button>
     <a id="dl-usdz" href="plano_relieve.usdz" download hidden>Descargar maqueta para iPhone (.usdz)</a>
   </div>
   <p class="alt">Si el modo en tu espacio no arranca en tu celular, queda el <a href="../ra.html">modo con marcador impreso</a>.</p>
@@ -466,8 +469,13 @@ function marcarGuardado(fechaIso){
   const f = fechaIso ? new Date(fechaIso).toLocaleDateString('es-CO', {day: 'numeric', month: 'short'}) : '';
   btnOff.textContent = `Guardado${f ? ' el ' + f : ''}: disponible sin internet ✓`; btnOff.disabled = true;
 }
-async function revisarGuardado(){   // ¿ya hay una copia completa en este celular?
-  try { const r = await caches.match('marca-guardado-completo'); if (r) marcarGuardado(await r.text()); } catch (e) {}
+async function revisarGuardado(){   // ¿ya hay una copia completa en este celular? (marca o, en su defecto, los archivos pesados)
+  try {
+    const r = await caches.match('marca-guardado-completo'); if (r) { marcarGuardado(await r.text()); return; }
+    const piezas = await Promise.all(['plano_relieve.glb', '../lib/8thwall/xr-slam.js', 'plano2d/plano_files/14/0_0.jpg', 'plano2d/plano_files/14/35_23.jpg']
+      .map((u) => caches.match(u)));
+    if (piezas.every(Boolean)) marcarGuardado('');
+  } catch (e) {}
 }
 if ('serviceWorker' in navigator && 'caches' in window){
   navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -481,6 +489,11 @@ if ('serviceWorker' in navigator && 'caches' in window){
     const reg = await navigator.serviceWorker.ready; reg.active.postMessage('guardarTodo');
   });
 } else { btnOff.hidden = true; }
+let pedidoInstalar = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; $('#btn-instalar').hidden = false; });
+$('#btn-instalar').addEventListener('click', async () => { if (!pedidoInstalar) return; pedidoInstalar.prompt();
+  const r = await pedidoInstalar.userChoice; pedidoInstalar = null; $('#btn-instalar').hidden = true;
+  if (r.outcome === 'accepted') avisar('Listo: abre el plano desde el ícono «Plano Corredor» de tu pantalla principal, también sin internet.', true); });
 </script>
 </body>
 </html>

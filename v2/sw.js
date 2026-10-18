@@ -1,9 +1,9 @@
 // Versión 2: guarda el visor en el celular. Usa la red cuando hay conexión (siempre la versión más reciente)
 // y la copia guardada cuando no la hay.
-const CACHE = 'plano-corredor-v2-6';
+const CACHE = 'plano-corredor-v2-7';
 const MARCA = 'marca-guardado-completo';
 const BASE = ['./', 'index.html', 'ver.html', '../lib/model-viewer.min.js', 'lib/openseadragon.min.js',
-  'plano_relieve.glb', 'poster_relieve.jpg', 'alturas.json', 'plano2d/plano.dzi', 'logo_invercoal.png', 'etiquetas.json'];
+  'plano_relieve.glb', 'poster_relieve.jpg', 'alturas.json', 'plano2d/plano.dzi', 'logo_invercoal.png', 'etiquetas.json', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png'];
 const MOTOR = ['../lib/three/three.min.js', '../lib/three/GLTFLoader.js', '../lib/8thwall/xr.js', '../lib/8thwall/xr-slam.js',
   '../lib/8thwall/resources/media-worker.js'];
 
