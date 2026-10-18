@@ -25,3 +25,9 @@ MODO CON MARCADOR (cualquier celular con cámara, sin ARCore)
   marcador.patt              patrón que reconoce la cámara (no editar)
 El QR del marcador abre directamente ra.html. Si el marcador se imprime a otro tamaño, el plano
 se verá proporcionalmente más grande o más pequeño (10 cm de marcador = 90 x 60 cm de plano).
+
+MODO NAVEGADOR SIN MARCADOR (celulares sin ARCore)
+  ver.html        realidad aumentada en el piso a escala real (motor 8th Wall, en lib/8thwall)
+  lib/8thwall     motor de Niantic Spatial, distribuido sin modificar bajo su XR Engine License Agreement (lib/8thwall/LICENSE)
+  lib/three       three.js r147 (licencia MIT)
+index.html envía a ver.html cuando el celular no tiene el visor nativo. El QR del plano no cambia.
