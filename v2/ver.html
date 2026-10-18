@@ -116,7 +116,7 @@ a{color:var(--accent)}
     <model-viewer id="mv" class="vista"
       src="plano_relieve.glb" ios-src="plano_relieve.usdz" poster="poster_relieve.jpg"
       alt="Maqueta del plano general del corredor carbonífero en relieve, 90 por 60 centímetros, con su rótulo"
-      ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" ar-placement="floor"
+      ar ar-modes="webxr quick-look" ar-scale="fixed" ar-placement="floor"
       camera-controls touch-action="pan-y" environment-image="neutral" exposure="0.85" tone-mapping="neutral"
       shadow-intensity="1" shadow-softness="0.8"
       camera-orbit="-10deg 52deg auto" min-camera-orbit="auto 5deg 0.15m" max-camera-orbit="auto 88deg 2.6m"
@@ -424,8 +424,7 @@ async function raNavegador(){
   const permisos = [];
   if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) permisos.push(DeviceMotionEvent.requestPermission().catch(() => {}));
   if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) permisos.push(DeviceOrientationEvent.requestPermission().catch(() => {}));
-  if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) {} }
-  marcarFull(false);
+  salirDeFull();
   $('#xr').hidden = false; document.body.classList.add('bloqueo'); estado.textContent = 'Cargando el motor de realidad aumentada…';
   await Promise.all(permisos);
   try { await cargarMotor(); } catch (e) { estado.textContent = 'No se pudo cargar el motor de realidad aumentada. Revisa la conexión.'; return; }
@@ -441,8 +440,16 @@ $('#xr-salir').addEventListener('click', () => {
   enRA = false; window.__pinAR = null; removeEventListener('resize', ajustarLienzo);
   $('#xr').hidden = true; document.body.classList.remove('bloqueo'); mv.setAttribute('src', SRC);
 });
+// ¿Realidad aumentada nativa? Solo iPhone/iPad (Quick Look) o Android con ARCore (WebXR). Sin ARCore → motor en el navegador.
+const ES_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let XR_NATIVO = false;
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then((v) => { XR_NATIVO = v; }).catch(() => {});
+function salirDeFull(){   // vuelve a la página normal sin esperar al navegador
+  if (stage.classList.contains('full')) marcarFull(false);
+  if (document.fullscreenElement) { try { document.exitFullscreen().catch(() => {}); } catch (e) {} }
+}
 $('#btn-ra').addEventListener('click', () => {
-  if (MODO === 'auto' && mv.canActivateAR) { mv.activateAR(); return; }
+  if (MODO === 'auto' && (ES_IOS || XR_NATIVO) && mv.canActivateAR) { salirDeFull(); mv.activateAR(); return; }
   raNavegador();
 });
 
