@@ -3,115 +3,313 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Plano Corredor Carbonífero AR</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<meta name="theme-color" content="#1d2621">
+<title>Corredor Carbonífero de Santander · Plano en relieve</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js"></script>
+<script type="module" src="lib/model-viewer.min.js"></script>
 <style>
-/* Layout: visor a pantalla casi completa con una ficha técnica tipo rótulo de plano debajo */
+/* Visor de maqueta: escenario grande con controles flotantes y ficha técnica tipo rótulo debajo */
 :root{
   --bg:#eef0ec; --surface:#ffffff; --ink:#1d2621; --muted:#5b6660; --rule:#c9cfc9;
-  --accent:#9a5a1c; --accent-ink:#ffffff; --stage:#dfe3dc;
+  --accent:#9a5a1c; --accent-ink:#ffffff; --stage:#dfe3dc; --pin:#d2382b;
   --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark){:root{
   --bg:#141917; --surface:#1c2320; --ink:#e7ebe6; --muted:#9aa59f; --rule:#34403a;
   --accent:#d9944f; --accent-ink:#1a1209; --stage:#202825; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#141917; --surface:#1c2320; --ink:#e7ebe6; --muted:#9aa59f; --rule:#34403a;
-  --accent:#d9944f; --accent-ink:#1a1209; --stage:#202825; color-scheme:dark}
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 24px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 28px}
+body.bloqueo{overflow:hidden}
 .wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px}
 header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
 h1{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4vw,2.1rem);letter-spacing:.01em;line-height:1.1;margin:0;text-wrap:balance}
 .sub{color:var(--muted);margin:0}
 .stage{position:relative;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--stage)}
-model-viewer{width:100%;height:min(68vh,620px);min-height:340px;background:var(--stage);--poster-color:var(--stage)}
-.ar-btn{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:12px 22px;
-  font:600 15px/1 var(--body);display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 2px 10px rgb(0 0 0 / .18)}
-.ar-btn:focus-visible,.seg button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
-.no-ar{position:absolute;left:12px;right:12px;bottom:12px;background:var(--surface);color:var(--muted);border:1px solid var(--rule);
-  border-radius:8px;padding:10px 12px;font-size:13px}
-.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
-.label{font-family:var(--display);font-weight:500;text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--muted)}
-.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--surface)}
-.seg button{border:0;background:transparent;color:var(--ink);font:500 14px/1 var(--body);padding:10px 14px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+model-viewer{display:block;width:100%;height:min(70vh,640px);min-height:360px;background:var(--stage);--poster-color:var(--stage)}
+.stage.full{position:fixed;inset:0;z-index:50;border:0;border-radius:0}
+.stage.full model-viewer{height:100%;min-height:0}
+.herr{position:absolute;top:calc(10px + var(--top-full,0px));right:calc(10px + var(--right-full,0px));display:flex;gap:8px;z-index:2}
+.stage.full{--top-full:env(safe-area-inset-top,0px);--right-full:env(safe-area-inset-right,0px)}
+.icono{width:44px;height:44px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 6px rgb(0 0 0 / .12)}
+.icono svg{width:22px;height:22px}
+.icono[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ar-btn{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2;
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px;max-width:calc(100% - 32px);
+  font:600 16px/1.2 var(--body);text-align:center;cursor:pointer;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
+.ar-btn:focus-visible,.icono:focus-visible,.lnk:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.yo{width:18px;height:18px;border-radius:50%;background:var(--pin);border:3px solid #fff;box-shadow:0 0 0 2px var(--pin),0 2px 8px rgb(0 0 0 / .35);padding:0;position:relative}
+.yo span{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);white-space:nowrap;background:var(--pin);color:#fff;
+  font:600 12px/1 var(--body);padding:5px 8px;border-radius:6px}
+#aviso{margin:0;color:var(--muted);min-height:1.5em}
+#aviso.ok{color:var(--ink)}
+.acciones{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.lnk{background:none;border:0;padding:0;color:var(--accent);font:500 15px var(--body);text-decoration:underline;cursor:pointer}
+a{color:var(--accent)}
+.alt{margin:0;color:var(--muted)}
+.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:0}
 .ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
 .ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
 .ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
-.alt{margin:0;color:var(--muted)} .alt a,.no-ar a{color:var(--accent)}
-.pasos{margin:0;padding-left:1.2em;color:var(--muted);max-width:68ch}
-.pasos li{margin-block:2px}
-@media (prefers-reduced-motion: reduce){model-viewer{--progress-bar-height:0}}
+.pasos{margin:0;padding-left:1.2em;color:var(--muted);max-width:70ch}
+.credito{font-size:12px;color:var(--muted);margin:0}
+/* realidad aumentada en el navegador */
+#xr{position:fixed;inset:0;z-index:100;background:#000}
+#camerafeed{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:rgb(20 25 23 / .82);color:#e7ebe6}
+#estado{margin:0;font-weight:600}
+.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.boton{border:1px solid #556159;background:transparent;color:#e7ebe6;font:500 14px/1 var(--body);padding:10px 14px;border-radius:8px;cursor:pointer}
+.boton[aria-pressed="true"]{background:#e7ebe6;color:#141917}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-
-
 <div class="wrap">
   <header>
     <h1>Corredor Carbonífero de Santander</h1>
-    <p class="sub">Plano general 90 × 60 cm · Cimitarra – Landázuri – Vélez</p>
+    <p class="sub">Plano general en relieve · Cimitarra – Landázuri – Vélez</p>
   </header>
 
-  <div class="stage">
+  <div class="stage" id="stage">
     <model-viewer id="mv"
-      src="plano_90x60.glb" ios-src="plano_90x60.usdz" poster="poster.jpg"
-      alt="Plano general del corredor carbonífero de Santander como lámina de 90 por 60 centímetros"
-      ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" ar-placement="wall"
-      camera-controls touch-action="pan-y" shadow-intensity="0.6" exposure="1" tone-mapping="neutral"
-      camera-orbit="0deg 84deg 1.2m" min-camera-orbit="auto auto 0.5m" max-camera-orbit="auto auto 3m"
-      interaction-prompt="auto">
-      <button slot="ar-button" class="ar-btn" type="button">Ver en tu espacio · tamaño real</button>
-      <div slot="ar-failure" class="no-ar">No se pudo iniciar la realidad aumentada en este equipo.</div>
+      src="plano_relieve.glb" ios-src="plano_relieve.usdz" poster="poster_relieve.jpg"
+      alt="Maqueta del plano general del corredor carbonífero en relieve, 90 por 60 centímetros, con su rótulo"
+      ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" ar-placement="floor"
+      camera-controls touch-action="pan-y" shadow-intensity="1" shadow-softness="0.8" exposure="1" tone-mapping="neutral"
+      camera-orbit="-10deg 52deg auto" min-camera-orbit="auto 5deg 0.15m" max-camera-orbit="auto 88deg 2.6m"
+      field-of-view="32deg" interaction-prompt="auto">
+      <span slot="ar-button" hidden></span>
+      <button class="yo" slot="hotspot-yo" id="yo" data-position="0m 0m 0m" data-normal="0m 1m 0m" hidden><span>Usted está aquí</span></button>
     </model-viewer>
-    <p class="no-ar" id="noar" hidden>Tu celular no trae el visor de Google para realidad aumentada. <a href="ver.html"><strong>Ábrelo aquí en tu espacio</strong></a>: funciona en el navegador, sin marcador.</p>
-  </div>
-
-  <div class="controls">
-    <span class="label">Colocar en</span>
-    <div class="seg" role="group" aria-label="Superficie para la realidad aumentada">
-      <button id="btn-wall" type="button" aria-pressed="true">Pared</button>
-      <button id="btn-floor" type="button" aria-pressed="false">Piso o mesa</button>
+    <div class="herr">
+      <button class="icono" id="btn-gps" type="button" aria-pressed="false" aria-label="Mostrar mi ubicación en el plano" title="Mi ubicación">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+      </button>
+      <button class="icono" id="btn-full" type="button" aria-pressed="false" aria-label="Pantalla completa" title="Pantalla completa">
+        <svg id="ico-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
     </div>
+    <button class="ar-btn" id="btn-ra" type="button">Ver en tu espacio · tamaño real</button>
   </div>
 
-  <p class="alt">¿No aparece el botón «Ver en tu espacio» en tu celular? <a href="ver.html">Ábrelo en el modo navegador</a>, que no necesita marcador. Si tu equipo es muy antiguo, queda el <a href="ra.html">modo con marcador</a>.</p>
+  <p id="aviso" role="status">Gira la maqueta con un dedo, acércala con dos y toca «Ver en tu espacio» para ponerla en el piso o en una mesa.</p>
+
+  <div class="acciones">
+    <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
+    <a href="plano_relieve.usdz" download>Descargar modelo para iPhone (.usdz)</a>
+    <a href="plano_relieve.glb" download>Descargar modelo (.glb)</a>
+  </div>
+
+  <p class="alt">Si el modo en tu espacio no arranca en tu celular, queda el <a href="ra.html">modo con marcador impreso</a>.</p>
 
   <dl class="ficha">
-    <div><dt>Tamaño en RA</dt><dd>90,0 × 60,0 cm (fijo)</dd></div>
-    <div><dt>Escala del plano</dt><dd>1:65 000</dd></div>
+    <div><dt>Tamaño en RA</dt><dd>90 × 60 cm (fijo)</dd></div>
+    <div><dt>Escala horizontal</dt><dd>1:65 000</dd></div>
+    <div><dt>Exageración vertical</dt><dd>2,5 ×</dd></div>
+    <div><dt>Relieve</dt><dd>Curvas de nivel c/50 m, rejilla 30 m</dd></div>
     <div><dt>Sistema</dt><dd>MAGNA-SIRGAS 2018 · Origen-Nacional</dd></div>
     <div><dt>Elaboró</dt><dd>Msc. Ing. Osney Izaquita</dd></div>
   </dl>
 
   <ol class="pasos">
-    <li>Toca «Ver en tu espacio» y apunta la cámara a una pared o al piso hasta que el teléfono la reconozca.</li>
-    <li>El plano aparece a 90 × 60 cm, igual que impreso. Arrástralo para moverlo y gíralo con dos dedos.</li>
-    <li>Acércate con el teléfono para leer convenciones y rótulo.</li>
+    <li>Mueve la maqueta en la pantalla: un dedo gira, dos dedos acercan. El botón de las esquinas la pone en pantalla completa.</li>
+    <li>El botón de ubicación marca dónde estás con el GPS del celular, si estás dentro del área del plano.</li>
+    <li>«Ver en tu espacio» la coloca a 90 × 60 cm. Apunta al piso, mueve el celular despacio y toca donde la quieras.</li>
   </ol>
+  <p class="credito">En celulares sin el visor de realidad aumentada de Google se usa el motor 8th Wall de Niantic Spatial, Inc., bajo el <a href="lib/8thwall/LICENSE">XR Engine License Agreement</a>, sin garantías de ningún tipo.</p>
+</div>
+
+<div id="xr" hidden>
+  <canvas id="camerafeed"></canvas>
+  <div id="hud" role="status">
+    <p id="estado">Cargando…</p>
+    <div class="fila">
+      <button class="boton" id="xr-gps" type="button" aria-pressed="false">Mi ubicación</button>
+      <button class="boton" id="xr-salir" type="button">Salir</button>
+    </div>
+  </div>
 </div>
 
 <script>
-  const mv = document.getElementById('mv');
-  const wall = document.getElementById('btn-wall'), floor = document.getElementById('btn-floor');
-  function place(where){
-    mv.setAttribute('ar-placement', where);
-    wall.setAttribute('aria-pressed', String(where === 'wall'));
-    floor.setAttribute('aria-pressed', String(where === 'floor'));
+const MODO = 'auto';   // 'auto': visor nativo si existe; 'navegador': siempre el motor en el navegador
+const $ = (s) => document.querySelector(s);
+const mv = $('#mv'), stage = $('#stage'), aviso = $('#aviso');
+const SRC = 'plano_relieve.glb';
+function avisar(t, ok){ aviso.textContent = t; aviso.classList.toggle('ok', !!ok); }
+
+/* ---------- Pantalla completa ---------- */
+const btnFull = $('#btn-full');
+function marcarFull(on){
+  stage.classList.toggle('full', on); document.body.classList.toggle('bloqueo', on);
+  btnFull.setAttribute('aria-pressed', String(on)); btnFull.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+  $('#ico-full').innerHTML = on ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
+  mv.setAttribute('touch-action', on ? 'none' : 'pan-y');
+}
+btnFull.addEventListener('click', async () => {
+  const on = !stage.classList.contains('full'); marcarFull(on);
+  try {
+    if (on && stage.requestFullscreen) await stage.requestFullscreen({navigationUI: 'hide'});
+    else if (!on && document.fullscreenElement) await document.exitFullscreen();
+  } catch (e) { /* en iPhone queda la versión que ocupa toda la ventana */ }
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && stage.classList.contains('full')) marcarFull(false); });
+
+/* ---------- GPS: de latitud/longitud a la maqueta ---------- */
+function aOrigenNacional(lat, lon){ // EPSG:9377, Transversa de Mercator sobre GRS80
+  const a=6378137, f=1/298.257222101, k0=0.9992, lat0=4*Math.PI/180, lon0=-73*Math.PI/180, FE=5000000, FN=2000000;
+  const e2=f*(2-f), ep2=e2/(1-e2), r=Math.PI/180, phi=lat*r, lam=lon*r;
+  const M=(p)=>a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*p-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*p)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*p)-(35*e2**3/3072)*Math.sin(6*p));
+  const N=a/Math.sqrt(1-e2*Math.sin(phi)**2), T=Math.tan(phi)**2, C=ep2*Math.cos(phi)**2, A=(lam-lon0)*Math.cos(phi);
+  return [FE+k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120),
+          FN+k0*(M(phi)-M(lat0)+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720))];
+}
+let ALT = null, posModelo = null, vigilancia = null;
+const altPromesa = fetch('alturas.json').then(r => r.json()).then(j => (ALT = j)).catch(() => null);
+function enMaqueta(E, N){
+  if (!ALT || E < ALT.E0 || E > ALT.E1 || N < ALT.N0 || N > ALT.N1) return null;
+  const fi = (E - ALT.E0) / (ALT.E1 - ALT.E0) * (ALT.gx - 1), fj = (ALT.N1 - N) / (ALT.N1 - ALT.N0) * (ALT.gy - 1);
+  const i0 = Math.min(Math.floor(fi), ALT.gx - 2), j0 = Math.min(Math.floor(fj), ALT.gy - 2), di = fi - i0, dj = fj - j0, g = ALT.alt_01mm;
+  const h = ((g[j0][i0]*(1-di) + g[j0][i0+1]*di)*(1-dj) + (g[j0+1][i0]*(1-di) + g[j0+1][i0+1]*di)*dj) / 1e4;
+  return {x: ALT.x0 + (E - ALT.E0) / ALT.ESC, y: h, z: -(ALT.ytop - (ALT.N1 - N) / ALT.ESC)};
+}
+function distanciaKm(E, N){
+  const dx = Math.max(ALT.E0 - E, 0, E - ALT.E1), dy = Math.max(ALT.N0 - N, 0, N - ALT.N1);
+  return Math.hypot(dx, dy) / 1000;
+}
+function alPosicion(p){
+  const [E, N] = aOrigenNacional(p.coords.latitude, p.coords.longitude);
+  const pm = enMaqueta(E, N), prec = Math.round(p.coords.accuracy || 0);
+  if (pm){
+    posModelo = pm;
+    mv.updateHotspot({name: 'hotspot-yo', position: `${pm.x}m ${pm.y + 0.002}m ${pm.z}m`});
+    $('#yo').hidden = false;
+    avisar(`Usted está aquí: E ${Math.round(E).toLocaleString('es-CO')} · N ${Math.round(N).toLocaleString('es-CO')} (±${prec} m).`, true);
+  } else {
+    posModelo = null; $('#yo').hidden = true;
+    avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
   }
-  wall.addEventListener('click', () => place('wall'));
-  floor.addEventListener('click', () => place('floor'));
-  customElements.whenDefined('model-viewer').then(() => {
-    mv.addEventListener('load', () => { document.getElementById('noar').hidden = !!mv.canActivateAR; });
+  if (window.__pinAR) window.__pinAR();
+}
+function alError(e){
+  const t = e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador.'
+          : 'Todavía no hay señal de GPS. Si estás bajo techo, acércate a una ventana o sal al aire libre.';
+  avisar(t);
+}
+async function gps(on){
+  $('#btn-gps').setAttribute('aria-pressed', String(on)); $('#xr-gps').setAttribute('aria-pressed', String(on));
+  if (!on){ if (vigilancia !== null) navigator.geolocation.clearWatch(vigilancia); vigilancia = null; posModelo = null; $('#yo').hidden = true;
+    if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada.'); return; }
+  if (!('geolocation' in navigator)){ avisar('Este navegador no permite usar la ubicación.'); return; }
+  avisar('Buscando tu posición con el GPS…'); await altPromesa;
+  vigilancia = navigator.geolocation.watchPosition(alPosicion, alError, {enableHighAccuracy: true, maximumAge: 5000, timeout: 30000});
+}
+$('#btn-gps').addEventListener('click', () => gps($('#btn-gps').getAttribute('aria-pressed') !== 'true'));
+$('#xr-gps').addEventListener('click', () => gps($('#xr-gps').getAttribute('aria-pressed') !== 'true'));
+
+/* ---------- Ver en tu espacio ---------- */
+function cargarScript(src, attrs){ return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src;
+  Object.entries(attrs || {}).forEach(([k, v]) => s.setAttribute(k, v)); s.onload = ok; s.onerror = mal; document.head.appendChild(s); }); }
+async function cargarMotor(){
+  if (!window.THREE){ await cargarScript('lib/three/three.min.js'); await cargarScript('lib/three/GLTFLoader.js'); }
+  if (!window.XR8){
+    await new Promise((ok, mal) => { window.addEventListener('xrloaded', ok, {once: true});
+      cargarScript('lib/8thwall/xr.js', {'data-preload-chunks': 'slam'}).catch(mal); setTimeout(() => mal(new Error('tiempo')), 60000); });
+  }
+  if (XR8.loadChunk) { try { await XR8.loadChunk('slam'); } catch (e) {} }
+}
+const estado = $('#estado');
+let enRA = false;
+function escenaRA(){
+  let soporte = null, colocado = false, listo = false, pin = null;
+  function colocar(p, cam){ soporte.position.set(p.x, 0.004, p.z);
+    soporte.rotation.y = Math.atan2(cam.position.x - p.x, cam.position.z - p.z); soporte.visible = true; colocado = true;
+    estado.textContent = 'Maqueta a 90 × 60 cm. Toca el piso para moverla; arrastra un dedo para girarla.'; }
+  window.__pinAR = () => { if (!pin) return; pin.visible = !!posModelo; if (posModelo) pin.position.set(posModelo.x, posModelo.y, posModelo.z); };
+  return {
+    name: 'maqueta-corredor',
+    onStart: () => {
+      const {scene, camera, renderer} = XR8.Threejs.xrScene();
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8478, 0.9));
+      const sol = new THREE.DirectionalLight(0xffffff, 0.9); sol.position.set(-1, 3, 1.5); scene.add(sol);
+      camera.position.set(0, 1.4, 0);
+      XR8.XrController.updateCameraProjectionMatrix({origin: camera.position, facing: camera.quaternion});
+      soporte = new THREE.Group(); soporte.visible = false; scene.add(soporte);
+      const sombra = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.68), new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false}));
+      sombra.rotation.x = -Math.PI / 2; sombra.position.y = -0.0035; soporte.add(sombra);
+      pin = new THREE.Group();
+      const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.035, 8), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      palo.position.y = 0.0175; pin.add(palo);
+      const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.007, 16, 12), new THREE.MeshBasicMaterial({color: 0xd2382b}));
+      cabeza.position.y = 0.037; pin.add(cabeza); pin.visible = false; soporte.add(pin); window.__pinAR();
+      estado.textContent = 'Cargando la maqueta…';
+      new THREE.GLTFLoader().load(SRC, (g) => { soporte.add(g.scene);
+        if (!colocado) estado.textContent = 'Apunta al piso y mueve el celular despacio de lado a lado…'; },
+        undefined, () => { estado.textContent = 'No se pudo cargar la maqueta.'; });
+      const piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), rayo = new THREE.Raycaster(), v = new THREE.Vector2();
+      const lienzo = $('#camerafeed'); let x0 = null, giro0 = 0, movio = false;
+      lienzo.ontouchstart = (e) => { if (e.touches.length === 1){ x0 = e.touches[0].clientX; giro0 = soporte.rotation.y; movio = false; } };
+      lienzo.ontouchmove = (e) => { if (x0 !== null && colocado){ const dx = e.touches[0].clientX - x0; if (Math.abs(dx) > 8) movio = true; soporte.rotation.y = giro0 + dx * 0.01; } };
+      lienzo.ontouchend = (e) => { const t = e.changedTouches[0], fue = movio; x0 = null; if (fue) return;
+        v.set((t.clientX / innerWidth) * 2 - 1, -(t.clientY / innerHeight) * 2 + 1); rayo.setFromCamera(v, camera);
+        const p = new THREE.Vector3(); if (rayo.ray.intersectPlane(piso, p)) colocar(p, camera); };
+    },
+    onUpdate: ({processCpuResult}) => {
+      const r = processCpuResult && processCpuResult.reality; if (!r) return;
+      if (r.trackingStatus === 'NORMAL' && !listo){ listo = true;
+        if (!colocado){ const {camera} = XR8.Threejs.xrScene(); const d = new THREE.Vector3(); camera.getWorldDirection(d); d.y = 0; d.normalize();
+          const p = camera.position.clone().addScaledVector(d, 1.2); colocar(p, camera); } }
+    },
+    onCameraStatusChange: (ev) => { if (ev.status === 'failed') estado.textContent = 'No se pudo abrir la cámara. Revisa los permisos del navegador.'; },
+  };
+}
+function ajustarLienzo(){ const c = $('#camerafeed'), dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); }
+async function raNavegador(){
+  const permisos = [];
+  if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) permisos.push(DeviceMotionEvent.requestPermission().catch(() => {}));
+  if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) permisos.push(DeviceOrientationEvent.requestPermission().catch(() => {}));
+  if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) {} }
+  marcarFull(false);
+  $('#xr').hidden = false; document.body.classList.add('bloqueo'); estado.textContent = 'Cargando el motor de realidad aumentada…';
+  await Promise.all(permisos);
+  try { await cargarMotor(); } catch (e) { estado.textContent = 'No se pudo cargar el motor de realidad aumentada. Revisa la conexión.'; return; }
+  mv.removeAttribute('src');   // libera memoria del visor mientras la cámara está activa
+  ajustarLienzo(); addEventListener('resize', ajustarLienzo);
+  XR8.XrController.configure({scale: 'absolute'});
+  XR8.addCameraPipelineModules([XR8.XrController.pipelineModule(), XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), escenaRA()]);
+  XR8.run({canvas: $('#camerafeed')}); enRA = true;
+  setTimeout(() => { if (enRA && /Apunta|Cargando/.test(estado.textContent)) estado.textContent = 'Si la maqueta no aparece, sigue moviendo el celular o toca el piso para colocarla.'; }, 15000);
+}
+$('#xr-salir').addEventListener('click', () => {
+  if (window.XR8 && enRA){ XR8.stop(); XR8.clearCameraPipelineModules(); }
+  enRA = false; window.__pinAR = null; removeEventListener('resize', ajustarLienzo);
+  $('#xr').hidden = true; document.body.classList.remove('bloqueo'); mv.setAttribute('src', SRC);
+});
+$('#btn-ra').addEventListener('click', () => {
+  if (MODO === 'auto' && mv.canActivateAR) { mv.activateAR(); return; }
+  raNavegador();
+});
+
+/* ---------- Sin internet ---------- */
+const btnOff = $('#btn-offline');
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data === 'guardado'){ btnOff.textContent = 'Guardado: disponible sin internet'; btnOff.disabled = true; avisar('Listo. La próxima vez esta página abre aunque no tengas conexión.', true); }
+    if (e.data === 'error'){ btnOff.textContent = 'Guardar para usar sin internet'; avisar('No se pudo guardar todo. Inténtalo de nuevo con buena conexión.'); }
   });
+  btnOff.addEventListener('click', async () => {
+    btnOff.textContent = 'Guardando… (unos 40 MB)';
+    const reg = await navigator.serviceWorker.ready; reg.active.postMessage('guardarTodo');
+  });
+} else { btnOff.hidden = true; }
 </script>
 </body>
 </html>

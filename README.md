@@ -1,33 +1,17 @@
-PLANO EN REALIDAD AUMENTADA - PUBLICACIÓN GRATUITA EN GITHUB PAGES
+# Corredor Carbonífero de Santander · Plano en relieve
 
-Contenido:
-  index.html        página del visor (model-viewer de Google)
-  plano_90x60.glb   modelo 3D para Android y navegadores (90 x 60 cm reales)
-  plano_90x60.usdz  modelo 3D para iPhone/iPad (AR Quick Look)
-  poster.jpg        imagen que se muestra mientras carga
+Visor web de la maqueta 3D del plano general (1:65 000, exageración vertical 2,5×, 90 × 60 cm).
+Página publicada: https://ingeogeek.github.io/plano-corredor/
 
-Pasos:
- 1. Crear una cuenta gratuita en github.com.
- 2. New repository -> nombre corto (ej. plano-corredor) -> Public -> Create.
- 3. "uploading an existing file" -> arrastrar los 4 archivos -> Commit changes.
- 4. Settings -> Pages -> Source: Deploy from a branch -> Branch: main, carpeta / (root) -> Save.
- 5. En 1-3 minutos la página queda en https://USUARIO.github.io/plano-corredor/
- 6. Abrir esa dirección en el celular y probar el botón "Ver en tu espacio".
- 7. Generar el QR con esa dirección exacta (QR estático, corrección de errores M o Q)
-    e insertarlo en el rótulo del plano en QGIS (Diseño -> Añadir imagen). Tamaño mínimo impreso: 2,5 x 2,5 cm.
+| Archivo | Para qué |
+| --- | --- |
+| index.html | Visor 3D. «Ver en tu espacio» usa el visor nativo (ARCore / iPhone) y, si no existe, el motor en el navegador |
+| ver.html | Mismo visor, pero «Ver en tu espacio» usa siempre el motor en el navegador (celulares sin ARCore) |
+| ra.html | Modo de respaldo con marcador impreso (marcador_10cm_carta.pdf) |
+| plano_relieve.glb / .usdz | Maqueta 3D (Android y web / iPhone) |
+| alturas.json | Rejilla de alturas de la maqueta para ubicar el GPS |
+| sw.js | Guarda el visor en el celular para abrirlo sin internet |
+| lib/ | model-viewer (Apache 2.0), three.js r147 (MIT), AR.js + A-Frame (MIT) y el motor 8th Wall de Niantic Spatial, distribuido sin modificar bajo su XR Engine License Agreement (lib/8thwall/LICENSE) |
 
-Para cambiar el plano: reemplazar los archivos .glb y .usdz con el mismo nombre. La URL y el QR no cambian.
-
-MODO CON MARCADOR (cualquier celular con cámara, sin ARCore)
-  ra.html                    página que abre la cámara (AR.js + A-Frame, en lib/)
-  marcador_10cm_carta.pdf    hoja para imprimir al 100 %: el cuadro negro debe medir 10 x 10 cm
-  marcador_10cm.png          el mismo marcador a 300 ppp, para insertarlo en el rótulo del plano
-  marcador.patt              patrón que reconoce la cámara (no editar)
-El QR del marcador abre directamente ra.html. Si el marcador se imprime a otro tamaño, el plano
-se verá proporcionalmente más grande o más pequeño (10 cm de marcador = 90 x 60 cm de plano).
-
-MODO NAVEGADOR SIN MARCADOR (celulares sin ARCore)
-  ver.html        realidad aumentada en el piso a escala real (motor 8th Wall, en lib/8thwall)
-  lib/8thwall     motor de Niantic Spatial, distribuido sin modificar bajo su XR Engine License Agreement (lib/8thwall/LICENSE)
-  lib/three       three.js r147 (licencia MIT)
-index.html envía a ver.html cuando el celular no tiene el visor nativo. El QR del plano no cambia.
+Relieve reconstruido a partir de las curvas de nivel del proyecto (c/50 m) en una rejilla de 30 m.
+Coordenadas: MAGNA-SIRGAS 2018 / Origen-Nacional (EPSG:9377). Elaboró: Msc. Ing. Osney Izaquita.
