@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#014f7d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Corredor Carbonífero de Santander · Plano 2D y maqueta 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script type="module" src="../lib/model-viewer.min.js"></script>
+<script src="lib/openseadragon.min.js" defer></script>
+<style>
+/* Visor de plano y maqueta: escenario grande con selector 2D/3D y controles flotantes; ficha técnica tipo rótulo debajo */
+:root{
+  --bg:#f2f4f6; --surface:#ffffff; --ink:#111518; --muted:#5b6168; --rule:#c9ced3;
+  --accent:#014f7d; --accent-ink:#ffffff; --stage:#e3e7ea; --pin:#d2382b; --gris:#929292;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1418; --surface:#182027; --ink:#e8edf1; --muted:#9aa4ad; --rule:#2c3640;
+  --accent:#4fa3d6; --accent-ink:#06121b; --stage:#1a232b; --gris:#6b737b; color-scheme:dark}}
+[hidden]{display:none!important}
+html,body{height:100%}
+html,body,.wrap{overflow-anchor:none}
+#hueco{border-radius:10px;background:var(--stage)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 28px}
+body.bloqueo{overflow:hidden}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4vw,2.1rem);letter-spacing:.01em;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:0}
+.sub{color:var(--muted);margin:0}
+.stage{position:relative;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--stage)}
+.vista{display:block;width:100%;height:min(70vh,640px);min-height:360px;background:var(--stage)}
+model-viewer.vista{--poster-color:var(--stage)}
+#osd{background:#f5f6f7}
+.stage.full{position:fixed;inset:0;z-index:50;border:0;border-radius:0;
+  --top-full:env(safe-area-inset-top,0px);--right-full:env(safe-area-inset-right,0px);--left-full:env(safe-area-inset-left,0px)}
+.stage.full .vista{height:100%;min-height:0}
+.herr{position:absolute;top:calc(10px + var(--top-full,0px));right:calc(10px + var(--right-full,0px));display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;z-index:3;max-width:104px}
+.modos{position:absolute;top:calc(10px + var(--top-full,0px));left:calc(10px + var(--left-full,0px));z-index:3;display:inline-flex;
+  border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:0 1px 6px rgb(0 0 0 / .12)}
+.modos button{border:0;background:transparent;color:var(--ink);font:600 14px/1 var(--body);padding:0 14px;height:44px;cursor:pointer}
+.modos button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.icono{width:44px;height:44px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 6px rgb(0 0 0 / .12)}
+.icono svg{width:22px;height:22px}
+.icono[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ar-btn{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:3;
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px;max-width:calc(100% - 32px);
+  font:600 16px/1.2 var(--body);text-align:center;cursor:pointer;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
+.ar-btn:focus-visible,.icono:focus-visible,.lnk:focus-visible,.modos button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.yo{width:18px;height:18px;border-radius:50%;background:var(--pin);border:3px solid #fff;box-shadow:0 0 0 2px var(--pin),0 2px 8px rgb(0 0 0 / .35);padding:0;position:relative}
+.yo span{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);white-space:nowrap;background:var(--pin);color:#fff;
+  font:600 12px/1 var(--body);padding:5px 8px;border-radius:6px}
+#aviso{margin:0;color:var(--muted);min-height:1.5em}
+#aviso.ok{color:var(--ink)}
+.acciones{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.lnk{background:none;border:0;padding:0;color:var(--accent);font:500 15px var(--body);text-decoration:underline;cursor:pointer}
+.lnk:disabled{color:var(--ink);text-decoration:none;cursor:default}
+a{color:var(--accent)}
+.alt{margin:0;color:var(--muted)}
+.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:0}
+.ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
+.ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.capas{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.capas .titulo-capas{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted);margin-right:4px}
+.capa{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  border-radius:999px;padding:8px 12px;font:500 14px/1 var(--body);cursor:pointer}
+.capa i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--c)}
+.capa[aria-pressed="false"]{color:var(--muted);background:transparent}
+.capa[aria-pressed="false"] i{background:transparent}
+.capa:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.et{pointer-events:none;border:0;background:none;padding:0;width:0;height:0;position:relative;transition:opacity .2s}
+.et:not([data-visible]){opacity:0}
+.et::before{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff}
+.et span{position:absolute;left:0;bottom:9px;transform:translateX(-50%);white-space:nowrap;background:var(--c);color:var(--t,#fff);
+  font:600 10px/1 var(--body);padding:3px 5px;border-radius:4px;box-shadow:0 1px 4px rgb(0 0 0 / .3)}
+.et.sin-texto span{display:none}
+.et-fallas{--c:#c62828}.et-pliegues{--c:#6a1b9a}.et-operadores{--c:#e65100}.et-bocaminas{--c:#f2b705;--t:#111518}
+@media (prefers-reduced-motion: reduce){.et{transition:none}}
+.membrete{background:var(--surface);border:1px solid var(--rule);border-top:6px solid var(--accent);border-radius:10px;padding:18px 20px;display:grid;gap:6px}
+.membrete-rol{margin:0;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--muted)}
+.membrete h2{font-size:1.6rem;letter-spacing:.01em;color:var(--ink)}
+.membrete-titulos{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:0}
+.membrete-titulos li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 16px;padding:8px 0;border-top:1px solid var(--rule)}
+.membrete-titulos li span:first-child{font-weight:600}
+.membrete-titulos li span+span{color:var(--muted)}
+.pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding-top:14px;border-top:3px solid var(--accent)}
+.pie-logo{background:#fff;border-radius:8px;padding:8px 12px;line-height:0}
+.pie-logo img{height:44px;width:auto;max-width:100%}
+.pie p{margin:0;font-family:var(--display);font-weight:700;font-size:1.2rem;letter-spacing:.04em;color:var(--accent)}
+.credito{font-size:12px;color:var(--muted);margin:0}
+/* realidad aumentada en el navegador */
+#xr{position:fixed;inset:0;z-index:100;background:#000}
+#camerafeed{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:rgb(20 25 23 / .82);color:#e7ebe6}
+#estado{margin:0;font-weight:600}
+.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.boton{border:1px solid #556159;background:transparent;color:#e7ebe6;font:500 14px/1 var(--body);padding:10px 14px;border-radius:8px;cursor:pointer}
+.boton[aria-pressed="true"]{background:#e7ebe6;color:#141917}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Corredor Carbonífero de Santander</h1>
+    <p class="sub">Plano general · Cimitarra – Landázuri – Vélez · 1:65&nbsp;000</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <model-viewer id="mv" class="vista"
+      src="plano_relieve.glb" ios-src="plano_relieve.usdz" poster="poster_relieve.jpg"
+      alt="Maqueta del plano general del corredor carbonífero en relieve, 90 por 60 centímetros, con su rótulo"
+      ar ar-modes="webxr quick-look" ar-scale="fixed" ar-placement="floor"
+      camera-controls touch-action="pan-y" environment-image="neutral" exposure="0.85" tone-mapping="neutral"
+      shadow-intensity="1" shadow-softness="0.8"
+      camera-orbit="-10deg 52deg auto" min-camera-orbit="auto 5deg 0.15m" max-camera-orbit="auto 88deg 2.6m"
+      field-of-view="32deg" interaction-prompt="auto">
+      <span slot="ar-button" hidden></span>
+      <button class="yo" slot="hotspot-yo" id="yo" data-position="0m 0m 0m" data-normal="0m 1m 0m" hidden><span>Usted está aquí</span></button>
+    </model-viewer>
+    <div id="osd" class="vista" hidden></div>
+    <div class="modos" role="group" aria-label="Tipo de vista">
+      <button id="m-2d" type="button" aria-pressed="false">Plano 2D</button>
+      <button id="m-3d" type="button" aria-pressed="true">Maqueta 3D</button>
+    </div>
+    <div class="herr">
+      <button class="icono" id="btn-mas" type="button" aria-label="Acercar el plano" title="Acercar" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="icono" id="btn-menos" type="button" aria-label="Alejar el plano" title="Alejar" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+      </button>
+      <button class="icono" id="btn-gps" type="button" aria-pressed="false" aria-label="Mostrar mi ubicación" title="Mi ubicación">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+      </button>
+      <button class="icono" id="btn-full" type="button" aria-pressed="false" aria-label="Pantalla completa" title="Pantalla completa">
+        <svg id="ico-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </div>
+    <button class="ar-btn" id="btn-ra" type="button">Ver en tu espacio · tamaño real</button>
+  </div>
+  <div id="hueco" hidden></div>
+  <div id="yo2d" class="yo" hidden><span>Usted está aquí</span></div>
+
+  <div class="capas" role="group" aria-label="Etiquetas de la maqueta 3D">
+    <span class="titulo-capas">Etiquetas 3D</span>
+    <button class="capa" type="button" data-grupo="fallas" aria-pressed="true" style="--c:#c62828"><i></i>Fallas</button>
+    <button class="capa" type="button" data-grupo="pliegues" aria-pressed="true" style="--c:#6a1b9a"><i></i>Pliegues</button>
+    <button class="capa" type="button" data-grupo="operadores" aria-pressed="true" style="--c:#e65100"><i></i>Operadores FEL-165</button>
+    <button class="capa" type="button" data-grupo="bocaminas" aria-pressed="true" style="--c:#f2b705"><i></i>Proyectos Piloto FHD-161</button>
+  </div>
+
+  <p id="aviso" role="status">Cambia entre el plano 2D y la maqueta 3D con los botones de arriba. Gira con un dedo y acerca con dos.</p>
+
+  <div class="acciones">
+    <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
+    <button class="lnk" id="btn-instalar" type="button" hidden>Instalar como aplicación</button>
+    <a id="dl-usdz" href="plano_relieve.usdz" download hidden>Descargar maqueta para iPhone (.usdz)</a>
+  </div>
+  <p class="alt">Si el modo en tu espacio no arranca en tu celular, queda el <a href="../ra.html">modo con marcador impreso</a>.</p>
+
+  <dl class="ficha">
+    <div><dt>Tamaño en RA</dt><dd>90 × 60 cm (fijo)</dd></div>
+    <div><dt>Escala horizontal</dt><dd>1:65&nbsp;000</dd></div>
+    <div><dt>Exageración vertical</dt><dd>2,5 ×</dd></div>
+    <div><dt>Relieve</dt><dd>Curvas c/50 m · rejilla 30 m</dd></div>
+    <div><dt>Sistema</dt><dd>MAGNA-SIRGAS 2018 · Origen-Nacional</dd></div>
+    <div><dt>Plano</dt><dd>90 × 60 cm · 1 de 1</dd></div>
+  </dl>
+
+
+  <section class="membrete" aria-labelledby="elaboro-nombre">
+    <p class="membrete-rol">Elaboró</p>
+    <h2 id="elaboro-nombre">Osney Izaquita</h2>
+    <ul class="membrete-titulos">
+      <li><span>Ingeniero Geólogo</span><span>Universidad Pedagógica y Tecnológica de Colombia</span></li>
+      <li><span>Especialista en Aplicación de TIC para la Enseñanza</span><span>Universidad de Santander</span></li>
+      <li><span>Magíster en Gestión de Cuencas Hidrográficas</span><span>Universidad Santo Tomás</span></li>
+      <li><span>Estudiante de Maestría en Recursos Digitales Aplicados a la Educación</span><span>Universidad de Cartagena</span></li>
+      <li><span>Piloto de drones</span></li>
+    </ul>
+  </section>
+
+  <p class="credito">Visor 3D: model-viewer (Google). Plano 2D: OpenSeadragon. En celulares sin el visor de realidad aumentada de Google se usa el motor 8th Wall de Niantic Spatial, Inc., bajo el <a href="../lib/8thwall/LICENSE">XR Engine License Agreement</a>, sin garantías de ningún tipo.</p>
+  <footer class="pie">
+    <div class="pie-logo"><img src="logo_invercoal.png" alt="INVERCOAL" width="835" height="201"></div>
+    <p>Grupo Invercoal</p>
+  </footer>
+</div>
+
+<div id="xr" hidden>
+  <canvas id="camerafeed"></canvas>
+  <div id="hud" role="status">
+    <p id="estado">Cargando…</p>
+    <div class="fila">
+      <button class="boton" id="xr-gps" type="button" aria-pressed="false">Mi ubicación</button>
+      <button class="boton" id="xr-salir" type="button">Salir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODO = '__MODO__';   // 'auto': visor nativo si existe; 'navegador': siempre el motor en el navegador
+const $ = (s) => document.querySelector(s);
+const mv = $('#mv'), stage = $('#stage'), aviso = $('#aviso');
+const SRC = 'plano_relieve.glb';
+// Diseño 90x60 de QGIS: marco del mapa en la hoja (mm) y su extensión (m, EPSG:9377)
+const MARCO = {x: 20.57, y: 15.43, w: 653.14, h: 569.14, E0: 4885966.64115825, E1: 4928420.74115825, N0: 2241436.91187441, N1: 2278431.03575892};
+const IMG = {w: 9039, h: 6025, pxmm: 9039 / 900.27};
+function avisar(t, ok){ aviso.textContent = t; aviso.classList.toggle('ok', !!ok); }
+
+/* ---------- Vista 2D / 3D ---------- */
+let visor2d = null, overlay2d = false, vista = '3d';
+function iniciar2d(){
+  if (visor2d || !window.OpenSeadragon) return;
+  visor2d = OpenSeadragon({ element: document.getElementById('osd'), tileSources: 'plano2d/plano.dzi',
+    showNavigationControl: false, maxZoomPixelRatio: 2.5, minZoomImageRatio: 0.9, visibilityRatio: 0.9,
+    constrainDuringPan: true, immediateRender: false, gestureSettingsTouch: {pinchRotate: false, flickEnabled: true},
+    gestureSettingsMouse: {clickToZoom: false, dblClickToZoom: true} });
+  visor2d.addHandler('open', () => { if (posPlano) ponerPin2d(); });
+}
+function cambiar(v){
+  vista = v;
+  $('#m-2d').setAttribute('aria-pressed', String(v === '2d')); $('#m-3d').setAttribute('aria-pressed', String(v === '3d'));
+  $('#osd').hidden = v !== '2d'; mv.hidden = v !== '3d'; $('#btn-mas').hidden = $('#btn-menos').hidden = v !== '2d'; document.querySelector('.capas').hidden = v !== '3d';
+  if (v === '2d') { iniciar2d(); avisar('Plano 2D: acerca con dos dedos o con doble toque para leer las convenciones y el rótulo.'); }
+  else avisar('Maqueta 3D: gira con un dedo y acerca con dos.');
+}
+$('#m-2d').addEventListener('click', () => cambiar('2d'));
+$('#btn-mas').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1.6); visor2d.viewport.applyConstraints(); } });
+$('#btn-menos').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1 / 1.6); visor2d.viewport.applyConstraints(); } });
+$('#m-3d').addEventListener('click', () => cambiar('3d'));
+
+/* ---------- Etiquetas 3D por grupo ---------- */
+fetch('etiquetas.json').then(r => r.json()).then((et) => {
+  Object.entries(et).forEach(([g, lista]) => lista.forEach((it, i) => {
+    const b = document.createElement('button');
+    b.className = `et et-${g}`; b.slot = `hotspot-${g}-${i}`; b.dataset.grupo = g; b.tabIndex = -1;
+    b.dataset.position = `${it.p[0]}m ${it.p[1] + 0.003}m ${it.p[2]}m`; b.dataset.normal = '0m 1m 0m'; b.dataset.visibilityAttribute = 'visible';
+    const t = document.createElement('span'); t.textContent = it.n; b.appendChild(t); mv.appendChild(b);
+  }));
+  setTimeout(pedirDespeje, 500);
+}).catch(() => {});
+document.querySelectorAll('.capa').forEach((c) => c.addEventListener('click', () => {
+  const on = c.getAttribute('aria-pressed') !== 'true'; c.setAttribute('aria-pressed', String(on));
+  mv.querySelectorAll(`.et[data-grupo="${c.dataset.grupo}"]`).forEach((e) => { e.hidden = !on; }); pedirDespeje();
+}));
+// Si dos nombres se tapan, el de menor prioridad queda solo como punto hasta que se acerque la vista
+let despejePendiente = false;
+function despejar(){
+  despejePendiente = false; const cajas = [];
+  const lista = [...mv.querySelectorAll('.et')].filter((e) => !e.hidden && e.hasAttribute('data-visible'));
+  lista.forEach((e) => e.classList.remove('sin-texto'));
+  for (const e of lista){
+    const r = e.querySelector('span').getBoundingClientRect(); if (!r.width) continue;
+    if (cajas.some((c) => !(r.right + 2 < c.left || r.left - 2 > c.right || r.bottom + 2 < c.top || r.top - 2 > c.bottom))) e.classList.add('sin-texto');
+    else cajas.push(r);
+  }
+}
+function pedirDespeje(){ if (!despejePendiente){ despejePendiente = true; requestAnimationFrame(() => requestAnimationFrame(despejar)); } }
+mv.addEventListener('camera-change', pedirDespeje); mv.addEventListener('load', () => setTimeout(pedirDespeje, 300));
+addEventListener('resize', pedirDespeje);
+
+/* ---------- Pantalla completa ---------- */
+const btnFull = $('#btn-full');
+let scrollPrevio = 0, sostener = 0;
+function volverAlInicio(){   // al salir de pantalla completa: misma posición de la página y encuadre inicial
+  const y = scrollPrevio, ir = () => { if (Math.abs(scrollY - y) > 2) scrollTo({top: y, behavior: 'instant'}); };
+  ir(); requestAnimationFrame(ir);
+  // durante 2 s se corrige cualquier salto (barra del navegador, aviso de permisos), salvo que la persona toque la pantalla
+  const fin = Date.now() + 2000; sostener = fin;
+  const vigilar = () => { if (sostener !== fin || Date.now() > fin) return; ir(); requestAnimationFrame(vigilar); };
+  requestAnimationFrame(vigilar);
+  mv.cameraOrbit = mv.getAttribute('camera-orbit'); mv.cameraTarget = 'auto auto auto'; mv.fieldOfView = mv.getAttribute('field-of-view'); mv.jumpCameraToGoal();
+  if (visor2d) setTimeout(() => visor2d.viewport.goHome(true), 200);
+  setTimeout(pedirDespeje, 300);
+}
+['touchstart', 'wheel', 'keydown'].forEach((ev) => addEventListener(ev, (e) => { if (!stage.contains(e.target)) sostener = 0; }, {passive: true}));
+function marcarFull(on){
+  const antes = stage.classList.contains('full'), hueco = $('#hueco');
+  if (on && !antes){ scrollPrevio = scrollY; hueco.style.height = stage.offsetHeight + 'px'; hueco.hidden = false; }
+  stage.classList.toggle('full', on); document.body.classList.toggle('bloqueo', on);
+  if (!on && antes){ hueco.hidden = true; volverAlInicio(); }
+  btnFull.setAttribute('aria-pressed', String(on)); btnFull.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+  $('#ico-full').innerHTML = on ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
+  mv.setAttribute('touch-action', on ? 'none' : 'pan-y');
+}
+btnFull.addEventListener('click', async () => {
+  const on = !stage.classList.contains('full'); marcarFull(on);
+  try {
+    if (on && stage.requestFullscreen) await stage.requestFullscreen({navigationUI: 'hide'});
+    else if (!on && document.fullscreenElement) await document.exitFullscreen();
+  } catch (e) { /* en iPhone queda la versión que ocupa toda la ventana */ }
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && stage.classList.contains('full')) marcarFull(false); });
+
+/* ---------- GPS ---------- */
+function aOrigenNacional(lat, lon){ // EPSG:9377, Transversa de Mercator sobre GRS80
+  const a=6378137, f=1/298.257222101, k0=0.9992, lat0=4*Math.PI/180, lon0=-73*Math.PI/180, FE=5000000, FN=2000000;
+  const e2=f*(2-f), ep2=e2/(1-e2), r=Math.PI/180, phi=lat*r, lam=lon*r;
+  const M=(p)=>a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*p-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*p)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*p)-(35*e2**3/3072)*Math.sin(6*p));
+  const N=a/Math.sqrt(1-e2*Math.sin(phi)**2), T=Math.tan(phi)**2, C=ep2*Math.cos(phi)**2, A=(lam-lon0)*Math.cos(phi);
+  return [FE+k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120),
+          FN+k0*(M(phi)-M(lat0)+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720))];
+}
+let ALT = null, posModelo = null, posPlano = null, vigilancia = null;
+const altPromesa = fetch('alturas.json').then(r => r.json()).then(j => (ALT = j)).catch(() => null);
+function enMaqueta(E, N){
+  if (!ALT || E < ALT.E0 || E > ALT.E1 || N < ALT.N0 || N > ALT.N1) return null;
+  const fi = (E - ALT.E0) / (ALT.E1 - ALT.E0) * (ALT.gx - 1), fj = (ALT.N1 - N) / (ALT.N1 - ALT.N0) * (ALT.gy - 1);
+  const i0 = Math.min(Math.floor(fi), ALT.gx - 2), j0 = Math.min(Math.floor(fj), ALT.gy - 2), di = fi - i0, dj = fj - j0, g = ALT.alt_01mm;
+  const h = ((g[j0][i0]*(1-di) + g[j0][i0+1]*di)*(1-dj) + (g[j0+1][i0]*(1-di) + g[j0+1][i0+1]*di)*dj) / 1e4;
+  return {x: ALT.x0 + (E - ALT.E0) / ALT.ESC, y: h, z: -(ALT.ytop - (ALT.N1 - N) / ALT.ESC)};
+}
+function enPlano(E, N){ // píxel de la imagen del plano 2D
+  if (E < MARCO.E0 || E > MARCO.E1 || N < MARCO.N0 || N > MARCO.N1) return null;
+  const xmm = MARCO.x + (E - MARCO.E0) / (MARCO.E1 - MARCO.E0) * MARCO.w, ymm = MARCO.y + (MARCO.N1 - N) / (MARCO.N1 - MARCO.N0) * MARCO.h;
+  return {x: xmm * IMG.pxmm, y: ymm * IMG.pxmm};
+}
+function ponerPin2d(){
+  if (!visor2d || !visor2d.world.getItemAt(0)) return;
+  const el = $('#yo2d');
+  if (!posPlano){ if (overlay2d){ visor2d.removeOverlay(el); overlay2d = false; } el.hidden = true; return; }
+  const p = visor2d.viewport.imageToViewportCoordinates(posPlano.x, posPlano.y); el.hidden = false;
+  if (overlay2d) visor2d.updateOverlay(el, p, OpenSeadragon.Placement.CENTER);
+  else { visor2d.addOverlay({element: el, location: p, placement: OpenSeadragon.Placement.CENTER}); overlay2d = true; }
+}
+function distanciaKm(E, N){
+  const dx = Math.max(MARCO.E0 - E, 0, E - MARCO.E1), dy = Math.max(MARCO.N0 - N, 0, N - MARCO.N1);
+  return Math.hypot(dx, dy) / 1000;
+}
+function alPosicion(p){
+  const [E, N] = aOrigenNacional(p.coords.latitude, p.coords.longitude);
+  const prec = Math.round(p.coords.accuracy || 0);
+  posModelo = enMaqueta(E, N); posPlano = enPlano(E, N);
+  if (posModelo){ mv.updateHotspot({name: 'hotspot-yo', position: `${posModelo.x}m ${posModelo.y + 0.002}m ${posModelo.z}m`}); $('#yo').hidden = false; }
+  else $('#yo').hidden = true;
+  ponerPin2d();
+  if (posPlano) avisar(`Usted está aquí: E ${Math.round(E).toLocaleString('es-CO')} · N ${Math.round(N).toLocaleString('es-CO')} (±${prec} m).`, true);
+  else avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
+  if (window.__pinAR) window.__pinAR();
+}
+function alError(e){
+  avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador.'
+                      : 'Todavía no hay señal de GPS. Si estás bajo techo, acércate a una ventana o sal al aire libre.');
+}
+async function gps(on){
+  $('#btn-gps').setAttribute('aria-pressed', String(on)); $('#xr-gps').setAttribute('aria-pressed', String(on));
+  if (!on){ if (vigilancia !== null) navigator.geolocation.clearWatch(vigilancia); vigilancia = null; posModelo = null; posPlano = null;
+    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada.'); return; }
+  if (!('geolocation' in navigator)){ avisar('Este navegador no permite usar la ubicación.'); return; }
+  avisar('Buscando tu posición con el GPS…'); await altPromesa;
+  vigilancia = navigator.geolocation.watchPosition(alPosicion, alError, {enableHighAccuracy: true, maximumAge: 5000, timeout: 30000});
+}
+$('#btn-gps').addEventListener('click', () => gps($('#btn-gps').getAttribute('aria-pressed') !== 'true'));
+$('#xr-gps').addEventListener('click', () => gps($('#xr-gps').getAttribute('aria-pressed') !== 'true'));
+
+/* ---------- Ver en tu espacio ---------- */
+function cargarScript(src, attrs){ return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src;
+  Object.entries(attrs || {}).forEach(([k, v]) => s.setAttribute(k, v)); s.onload = ok; s.onerror = mal; document.head.appendChild(s); }); }
+async function cargarMotor(){
+  if (!window.THREE){ await cargarScript('../lib/three/three.min.js'); await cargarScript('../lib/three/GLTFLoader.js'); }
+  if (!window.XR8){
+    await new Promise((ok, mal) => { window.addEventListener('xrloaded', ok, {once: true});
+      cargarScript('../lib/8thwall/xr.js', {'data-preload-chunks': 'slam'}).catch(mal); setTimeout(() => mal(new Error('tiempo')), 60000); });
+  }
+  if (XR8.loadChunk) { try { await XR8.loadChunk('slam'); } catch (e) {} }
+}
+const estado = $('#estado');
+let enRA = false;
+function escenaRA(){
+  let soporte = null, colocado = false, listo = false, pin = null;
+  function colocar(p, cam){ soporte.position.set(p.x, 0.004, p.z);
+    soporte.rotation.y = Math.atan2(cam.position.x - p.x, cam.position.z - p.z); soporte.visible = true; colocado = true;
+    estado.textContent = 'Maqueta a 90 × 60 cm. Toca el piso para moverla; arrastra un dedo para girarla.'; }
+  window.__pinAR = () => { if (!pin) return; pin.visible = !!posModelo; if (posModelo) pin.position.set(posModelo.x, posModelo.y, posModelo.z); };
+  return {
+    name: 'maqueta-corredor',
+    onStart: () => {
+      const {scene, camera, renderer} = XR8.Threejs.xrScene();
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      // luz moderada: la textura ya trae el sombreado del plano
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x7d776c, 0.55));
+      const sol = new THREE.DirectionalLight(0xfff6e8, 0.6); sol.position.set(-1, 3, 1.5); scene.add(sol);
+      camera.position.set(0, 1.4, 0);
+      XR8.XrController.updateCameraProjectionMatrix({origin: camera.position, facing: camera.quaternion});
+      soporte = new THREE.Group(); soporte.visible = false; scene.add(soporte);
+      const sombra = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.68), new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false}));
+      sombra.rotation.x = -Math.PI / 2; sombra.position.y = -0.0035; soporte.add(sombra);
+      pin = new THREE.Group();
+      const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.035, 8), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      palo.position.y = 0.0175; pin.add(palo);
+      const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.007, 16, 12), new THREE.MeshBasicMaterial({color: 0xd2382b}));
+      cabeza.position.y = 0.037; pin.add(cabeza); pin.visible = false; soporte.add(pin); window.__pinAR();
+      estado.textContent = 'Cargando la maqueta…';
+      new THREE.GLTFLoader().load(SRC, (g) => { soporte.add(g.scene);
+        if (!colocado) estado.textContent = 'Apunta al piso y mueve el celular despacio de lado a lado…'; },
+        undefined, () => { estado.textContent = 'No se pudo cargar la maqueta.'; });
+      const piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), rayo = new THREE.Raycaster(), v = new THREE.Vector2();
+      const lienzo = $('#camerafeed'); let x0 = null, giro0 = 0, movio = false;
+      lienzo.ontouchstart = (e) => { if (e.touches.length === 1){ x0 = e.touches[0].clientX; giro0 = soporte.rotation.y; movio = false; } };
+      lienzo.ontouchmove = (e) => { if (x0 !== null && colocado){ const dx = e.touches[0].clientX - x0; if (Math.abs(dx) > 8) movio = true; soporte.rotation.y = giro0 + dx * 0.01; } };
+      lienzo.ontouchend = (e) => { const t = e.changedTouches[0], fue = movio; x0 = null; if (fue) return;
+        v.set((t.clientX / innerWidth) * 2 - 1, -(t.clientY / innerHeight) * 2 + 1); rayo.setFromCamera(v, camera);
+        const p = new THREE.Vector3(); if (rayo.ray.intersectPlane(piso, p)) colocar(p, camera); };
+    },
+    onUpdate: ({processCpuResult}) => {
+      const r = processCpuResult && processCpuResult.reality; if (!r) return;
+      if (r.trackingStatus === 'NORMAL' && !listo){ listo = true;
+        if (!colocado){ const {camera} = XR8.Threejs.xrScene(); const d = new THREE.Vector3(); camera.getWorldDirection(d); d.y = 0; d.normalize();
+          const p = camera.position.clone().addScaledVector(d, 1.2); colocar(p, camera); } }
+    },
+    onCameraStatusChange: (ev) => { if (ev.status === 'failed') estado.textContent = 'No se pudo abrir la cámara. Revisa los permisos del navegador.'; },
+  };
+}
+function ajustarLienzo(){ const c = $('#camerafeed'), dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); }
+async function raNavegador(){
+  const permisos = [];
+  if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) permisos.push(DeviceMotionEvent.requestPermission().catch(() => {}));
+  if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) permisos.push(DeviceOrientationEvent.requestPermission().catch(() => {}));
+  salirDeFull();
+  $('#xr').hidden = false; document.body.classList.add('bloqueo'); estado.textContent = 'Cargando el motor de realidad aumentada…';
+  await Promise.all(permisos);
+  try { await cargarMotor(); } catch (e) { estado.textContent = 'No se pudo cargar el motor de realidad aumentada. Revisa la conexión.'; return; }
+  mv.removeAttribute('src');
+  ajustarLienzo(); addEventListener('resize', ajustarLienzo);
+  XR8.XrController.configure({scale: 'absolute'});
+  XR8.addCameraPipelineModules([XR8.XrController.pipelineModule(), XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), escenaRA()]);
+  XR8.run({canvas: $('#camerafeed')}); enRA = true;
+  setTimeout(() => { if (enRA && /Apunta|Cargando/.test(estado.textContent)) estado.textContent = 'Si la maqueta no aparece, sigue moviendo el celular o toca el piso para colocarla.'; }, 15000);
+}
+$('#xr-salir').addEventListener('click', () => {
+  if (window.XR8 && enRA){ XR8.stop(); XR8.clearCameraPipelineModules(); }
+  enRA = false; window.__pinAR = null; removeEventListener('resize', ajustarLienzo);
+  $('#xr').hidden = true; document.body.classList.remove('bloqueo'); mv.setAttribute('src', SRC);
+});
+// ¿Realidad aumentada nativa? Solo iPhone/iPad (Quick Look) o Android con ARCore (WebXR). Sin ARCore → motor en el navegador.
+const ES_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let XR_NATIVO = false;
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then((v) => { XR_NATIVO = v; }).catch(() => {});
+function salirDeFull(){   // vuelve a la página normal sin esperar al navegador
+  if (stage.classList.contains('full')) marcarFull(false);
+  if (document.fullscreenElement) { try { document.exitFullscreen().catch(() => {}); } catch (e) {} }
+}
+$('#btn-ra').addEventListener('click', () => {
+  if (MODO === 'auto' && (ES_IOS || XR_NATIVO) && mv.canActivateAR) { salirDeFull(); mv.activateAR(); return; }
+  raNavegador();
+});
+
+/* ---------- iPhone: archivo para ver la maqueta en el espacio sin internet ---------- */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+  $('#dl-usdz').hidden = false;
+  $('#dl-usdz').title = 'Guárdalo en Archivos y ábrelo desde allí para ponerlo en tu espacio aunque no tengas conexión';
+}
+
+/* ---------- Sin internet ---------- */
+const btnOff = $('#btn-offline');
+function marcarGuardado(fechaIso){
+  const f = fechaIso ? new Date(fechaIso).toLocaleDateString('es-CO', {day: 'numeric', month: 'short'}) : '';
+  btnOff.textContent = `Guardado${f ? ' el ' + f : ''}: disponible sin internet ✓`; btnOff.disabled = true;
+}
+async function revisarGuardado(){   // ¿ya hay una copia completa en este celular? (marca o, en su defecto, los archivos pesados)
+  try {
+    const r = await caches.match('marca-guardado-completo'); if (r) { marcarGuardado(await r.text()); return; }
+    const piezas = await Promise.all(['plano_relieve.glb', '../lib/8thwall/xr-slam.js', 'plano2d/plano_files/14/0_0.jpg', 'plano2d/plano_files/14/35_23.jpg']
+      .map((u) => caches.match(u)));
+    if (piezas.every(Boolean)) marcarGuardado('');
+  } catch (e) {}
+}
+if ('serviceWorker' in navigator && 'caches' in window){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  revisarGuardado(); navigator.serviceWorker.ready.then(() => setTimeout(revisarGuardado, 800));
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data === 'guardado'){ marcarGuardado(new Date().toISOString()); avisar('Listo. La próxima vez esta página abre aunque no tengas conexión.', true); }
+    if (e.data === 'error'){ btnOff.disabled = false; btnOff.textContent = 'Guardar para usar sin internet'; avisar('No se pudo guardar todo. Inténtalo de nuevo con buena conexión.'); }
+  });
+  btnOff.addEventListener('click', async () => {
+    btnOff.disabled = true; btnOff.textContent = 'Guardando… (unos 50 MB, no cierres la página)';
+    const reg = await navigator.serviceWorker.ready; reg.active.postMessage('guardarTodo');
+  });
+} else { btnOff.hidden = true; }
+let pedidoInstalar = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; $('#btn-instalar').hidden = false; });
+$('#btn-instalar').addEventListener('click', async () => { if (!pedidoInstalar) return; pedidoInstalar.prompt();
+  const r = await pedidoInstalar.userChoice; pedidoInstalar = null; $('#btn-instalar').hidden = true;
+  if (r.outcome === 'accepted') avisar('Listo: abre el plano desde el ícono «Plano Corredor» de tu pantalla principal, también sin internet.', true); });
+</script>
+</body>
+</html>
