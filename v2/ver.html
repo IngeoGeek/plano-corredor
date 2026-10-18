@@ -157,6 +157,7 @@ a{color:var(--accent)}
 
   <div class="acciones">
     <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
+    <a id="dl-usdz" href="plano_relieve.usdz" download hidden>Descargar maqueta para iPhone (.usdz)</a>
   </div>
   <p class="alt">Si el modo en tu espacio no arranca en tu celular, queda el <a href="../ra.html">modo con marcador impreso</a>.</p>
 
@@ -425,6 +426,12 @@ $('#btn-ra').addEventListener('click', () => {
   if (MODO === 'auto' && mv.canActivateAR) { mv.activateAR(); return; }
   raNavegador();
 });
+
+/* ---------- iPhone: archivo para ver la maqueta en el espacio sin internet ---------- */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+  $('#dl-usdz').hidden = false;
+  $('#dl-usdz').title = 'Guárdalo en Archivos y ábrelo desde allí para ponerlo en tu espacio aunque no tengas conexión';
+}
 
 /* ---------- Sin internet ---------- */
 const btnOff = $('#btn-offline');
