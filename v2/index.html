@@ -63,6 +63,22 @@ a{color:var(--accent)}
 .ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
 .ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
 .ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.capas{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.capas .titulo-capas{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted);margin-right:4px}
+.capa{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  border-radius:999px;padding:8px 12px;font:500 14px/1 var(--body);cursor:pointer}
+.capa i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--c)}
+.capa[aria-pressed="false"]{color:var(--muted);background:transparent}
+.capa[aria-pressed="false"] i{background:transparent}
+.capa:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.et{pointer-events:none;border:0;background:none;padding:0;width:0;height:0;position:relative;transition:opacity .2s}
+.et:not([data-visible]){opacity:0}
+.et::before{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff}
+.et span{position:absolute;left:0;bottom:9px;transform:translateX(-50%);white-space:nowrap;background:var(--c);color:var(--t,#fff);
+  font:600 10px/1 var(--body);padding:3px 5px;border-radius:4px;box-shadow:0 1px 4px rgb(0 0 0 / .3)}
+.et.sin-texto span{display:none}
+.et-fallas{--c:#c62828}.et-pliegues{--c:#6a1b9a}.et-operadores{--c:#e65100}.et-bocaminas{--c:#f2b705;--t:#111518}
+@media (prefers-reduced-motion: reduce){.et{transition:none}}
 .membrete{background:var(--surface);border:1px solid var(--rule);border-top:6px solid var(--accent);border-radius:10px;padding:18px 20px;display:grid;gap:6px}
 .membrete-rol{margin:0;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--muted)}
 .membrete h2{font-size:1.6rem;letter-spacing:.01em;color:var(--ink)}
@@ -128,6 +144,14 @@ a{color:var(--accent)}
     <button class="ar-btn" id="btn-ra" type="button">Ver en tu espacio · tamaño real</button>
   </div>
   <div id="yo2d" class="yo" hidden><span>Usted está aquí</span></div>
+
+  <div class="capas" role="group" aria-label="Etiquetas de la maqueta 3D">
+    <span class="titulo-capas">Etiquetas 3D</span>
+    <button class="capa" type="button" data-grupo="fallas" aria-pressed="true" style="--c:#c62828"><i></i>Fallas</button>
+    <button class="capa" type="button" data-grupo="pliegues" aria-pressed="true" style="--c:#6a1b9a"><i></i>Pliegues</button>
+    <button class="capa" type="button" data-grupo="operadores" aria-pressed="true" style="--c:#e65100"><i></i>Operadores FEL-165</button>
+    <button class="capa" type="button" data-grupo="bocaminas" aria-pressed="true" style="--c:#f2b705"><i></i>Bocaminas FHD-161</button>
+  </div>
 
   <p id="aviso" role="status">Cambia entre el plano 2D y la maqueta 3D con los botones de arriba. Gira con un dedo y acerca con dos.</p>
 
@@ -199,7 +223,7 @@ function iniciar2d(){
 function cambiar(v){
   vista = v;
   $('#m-2d').setAttribute('aria-pressed', String(v === '2d')); $('#m-3d').setAttribute('aria-pressed', String(v === '3d'));
-  $('#osd').hidden = v !== '2d'; mv.hidden = v !== '3d'; $('#btn-mas').hidden = $('#btn-menos').hidden = v !== '2d';
+  $('#osd').hidden = v !== '2d'; mv.hidden = v !== '3d'; $('#btn-mas').hidden = $('#btn-menos').hidden = v !== '2d'; document.querySelector('.capas').hidden = v !== '3d';
   if (v === '2d') { iniciar2d(); avisar('Plano 2D: acerca con dos dedos o con doble toque para leer las convenciones y el rótulo.'); }
   else avisar('Maqueta 3D: gira con un dedo y acerca con dos.');
 }
@@ -207,6 +231,36 @@ $('#m-2d').addEventListener('click', () => cambiar('2d'));
 $('#btn-mas').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1.6); visor2d.viewport.applyConstraints(); } });
 $('#btn-menos').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1 / 1.6); visor2d.viewport.applyConstraints(); } });
 $('#m-3d').addEventListener('click', () => cambiar('3d'));
+
+/* ---------- Etiquetas 3D por grupo ---------- */
+fetch('etiquetas.json').then(r => r.json()).then((et) => {
+  Object.entries(et).forEach(([g, lista]) => lista.forEach((it, i) => {
+    const b = document.createElement('button');
+    b.className = `et et-${g}`; b.slot = `hotspot-${g}-${i}`; b.dataset.grupo = g; b.tabIndex = -1;
+    b.dataset.position = `${it.p[0]}m ${it.p[1] + 0.003}m ${it.p[2]}m`; b.dataset.normal = '0m 1m 0m'; b.dataset.visibilityAttribute = 'visible';
+    const t = document.createElement('span'); t.textContent = it.n; b.appendChild(t); mv.appendChild(b);
+  }));
+  setTimeout(pedirDespeje, 500);
+}).catch(() => {});
+document.querySelectorAll('.capa').forEach((c) => c.addEventListener('click', () => {
+  const on = c.getAttribute('aria-pressed') !== 'true'; c.setAttribute('aria-pressed', String(on));
+  mv.querySelectorAll(`.et[data-grupo="${c.dataset.grupo}"]`).forEach((e) => { e.hidden = !on; }); pedirDespeje();
+}));
+// Si dos nombres se tapan, el de menor prioridad queda solo como punto hasta que se acerque la vista
+let despejePendiente = false;
+function despejar(){
+  despejePendiente = false; const cajas = [];
+  const lista = [...mv.querySelectorAll('.et')].filter((e) => !e.hidden && e.hasAttribute('data-visible'));
+  lista.forEach((e) => e.classList.remove('sin-texto'));
+  for (const e of lista){
+    const r = e.querySelector('span').getBoundingClientRect(); if (!r.width) continue;
+    if (cajas.some((c) => !(r.right + 2 < c.left || r.left - 2 > c.right || r.bottom + 2 < c.top || r.top - 2 > c.bottom))) e.classList.add('sin-texto');
+    else cajas.push(r);
+  }
+}
+function pedirDespeje(){ if (!despejePendiente){ despejePendiente = true; requestAnimationFrame(() => requestAnimationFrame(despejar)); } }
+mv.addEventListener('camera-change', pedirDespeje); mv.addEventListener('load', () => setTimeout(pedirDespeje, 300));
+addEventListener('resize', pedirDespeje);
 
 /* ---------- Pantalla completa ---------- */
 const btnFull = $('#btn-full');
