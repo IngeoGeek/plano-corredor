@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1d2621">
+<meta name="theme-color" content="#014f7d">
 <title>Corredor Carbonífero de Santander · Plano 2D y maqueta 3D</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script type="module" src="../lib/model-viewer.min.js"></script>
@@ -11,15 +11,15 @@
 <style>
 /* Visor de plano y maqueta: escenario grande con selector 2D/3D y controles flotantes; ficha técnica tipo rótulo debajo */
 :root{
-  --bg:#eef0ec; --surface:#ffffff; --ink:#1d2621; --muted:#5b6660; --rule:#c9cfc9;
-  --accent:#9a5a1c; --accent-ink:#ffffff; --stage:#dfe3dc; --pin:#d2382b;
+  --bg:#f2f4f6; --surface:#ffffff; --ink:#111518; --muted:#5b6168; --rule:#c9ced3;
+  --accent:#014f7d; --accent-ink:#ffffff; --stage:#e3e7ea; --pin:#d2382b; --gris:#929292;
   --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#141917; --surface:#1c2320; --ink:#e7ebe6; --muted:#9aa59f; --rule:#34403a;
-  --accent:#d9944f; --accent-ink:#1a1209; --stage:#202825; color-scheme:dark}}
+  --bg:#0f1418; --surface:#182027; --ink:#e8edf1; --muted:#9aa4ad; --rule:#2c3640;
+  --accent:#4fa3d6; --accent-ink:#06121b; --stage:#1a232b; --gris:#6b737b; color-scheme:dark}}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
@@ -33,7 +33,7 @@ h2{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:0}
 .stage{position:relative;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--stage)}
 .vista{display:block;width:100%;height:min(70vh,640px);min-height:360px;background:var(--stage)}
 model-viewer.vista{--poster-color:var(--stage)}
-#osd{background:#f4f4f0}
+#osd{background:#f5f6f7}
 .stage.full{position:fixed;inset:0;z-index:50;border:0;border-radius:0;
   --top-full:env(safe-area-inset-top,0px);--right-full:env(safe-area-inset-right,0px);--left-full:env(safe-area-inset-left,0px)}
 .stage.full .vista{height:100%;min-height:0}
@@ -63,10 +63,17 @@ a{color:var(--accent)}
 .ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
 .ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
 .ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
-details{border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:12px 16px}
-details summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.15rem}
-details ol{margin:10px 0 4px;padding-left:1.3em;display:grid;gap:8px;max-width:72ch}
-details li strong{font-weight:600}
+.membrete{background:var(--surface);border:1px solid var(--rule);border-top:6px solid var(--accent);border-radius:10px;padding:18px 20px;display:grid;gap:6px}
+.membrete-rol{margin:0;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--muted)}
+.membrete h2{font-size:1.6rem;letter-spacing:.01em;color:var(--ink)}
+.membrete-titulos{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:0}
+.membrete-titulos li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 16px;padding:8px 0;border-top:1px solid var(--rule)}
+.membrete-titulos li span:first-child{font-weight:600}
+.membrete-titulos li span+span{color:var(--muted)}
+.pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding-top:14px;border-top:3px solid var(--accent)}
+.pie-logo{background:#fff;border-radius:8px;padding:8px 12px;line-height:0}
+.pie-logo img{height:44px;width:auto;max-width:100%}
+.pie p{margin:0;font-family:var(--display);font-weight:700;font-size:1.2rem;letter-spacing:.04em;color:var(--accent)}
 .credito{font-size:12px;color:var(--muted);margin:0}
 /* realidad aumentada en el navegador */
 #xr{position:fixed;inset:0;z-index:100;background:#000}
@@ -126,8 +133,6 @@ details li strong{font-weight:600}
 
   <div class="acciones">
     <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
-    <a href="plano_relieve.usdz" download>Descargar modelo para iPhone (.usdz)</a>
-    <a href="plano_relieve.glb" download>Descargar modelo (.glb)</a>
   </div>
   <p class="alt">Si el modo en tu espacio no arranca en tu celular, queda el <a href="../ra.html">modo con marcador impreso</a>.</p>
 
@@ -137,24 +142,27 @@ details li strong{font-weight:600}
     <div><dt>Exageración vertical</dt><dd>2,5 ×</dd></div>
     <div><dt>Relieve</dt><dd>Curvas c/50 m · rejilla 30 m</dd></div>
     <div><dt>Sistema</dt><dd>MAGNA-SIRGAS 2018 · Origen-Nacional</dd></div>
-    <div><dt>Elaboró</dt><dd>Msc. Ing. Osney Izaquita</dd></div>
+    <div><dt>Plano</dt><dd>90 × 60 cm · 1 de 1</dd></div>
   </dl>
 
-  <details>
-    <summary>¿Cómo se hizo?</summary>
-    <ol>
-      <li><strong>Plano en QGIS.</strong> Se partió del proyecto SIG del corredor: títulos mineros, mantos de carbón, fallas, pliegues, drenajes, vías, centros poblados y curvas de nivel cada 50 m, en MAGNA-SIRGAS 2018 / Origen-Nacional. Con ellos se diseñó el plano de 90 × 60 cm a escala 1:65 000 y se exportó a PDF.</li>
-      <li><strong>Relieve.</strong> Las curvas de nivel se convirtieron en un modelo de elevación con celdas de 30 m, interpolando entre curvas y suavizando las zonas planas.</li>
-      <li><strong>Maqueta en Blender.</strong> El modelo de elevación se transformó en una superficie 3D a la misma escala del plano, con el relieve exagerado 2,5 veces para que se lea a simple vista. Se le agregaron paredes de bloque y se montó sobre la hoja de 90 × 60 cm.</li>
-      <li><strong>Texturas.</strong> El PDF del plano se convirtió en imagen de alta resolución (255 ppp). El marco del mapa se «pegó» sobre el relieve y el rótulo se colocó sobre la hoja, de modo que la maqueta muestra exactamente las mismas convenciones del plano impreso.</li>
-      <li><strong>Formatos para celular.</strong> La maqueta se exportó como GLB (Android y navegadores) y USDZ (iPhone), y el plano 2D se cortó en mosaicos para hacer zoom sin perder nitidez.</li>
-      <li><strong>Publicación y QR.</strong> Todo se publicó como página web gratuita en GitHub Pages; el código QR solo contiene la dirección de esa página.</li>
-      <li><strong>Realidad aumentada.</strong> El celular coloca la maqueta en el piso a 90 × 60 cm con su propio sistema (ARCore en Android, ARKit en iPhone). En celulares sin ARCore se usa un motor que funciona dentro del navegador (8th Wall).</li>
-      <li><strong>GPS.</strong> La latitud y longitud del celular se convierten a coordenadas Origen-Nacional (EPSG:9377) y se marcan sobre el plano y la maqueta. El GPS no necesita datos móviles; la página sí debe estar guardada para abrir sin internet.</li>
-    </ol>
-  </details>
+
+  <section class="membrete" aria-labelledby="elaboro-nombre">
+    <p class="membrete-rol">Elaboró</p>
+    <h2 id="elaboro-nombre">Osney Izaquita</h2>
+    <ul class="membrete-titulos">
+      <li><span>Ingeniero Geólogo</span><span>Universidad Pedagógica y Tecnológica de Colombia</span></li>
+      <li><span>Especialista en Aplicación de TIC para la Enseñanza</span><span>Universidad de Santander</span></li>
+      <li><span>Magíster en Gestión de Cuencas Hidrográficas</span><span>Universidad Santo Tomás</span></li>
+      <li><span>Estudiante de Maestría en Recursos Digitales Aplicados a la Educación</span><span>Universidad de Cartagena</span></li>
+      <li><span>Piloto de drones</span></li>
+    </ul>
+  </section>
 
   <p class="credito">Visor 3D: model-viewer (Google). Plano 2D: OpenSeadragon. En celulares sin el visor de realidad aumentada de Google se usa el motor 8th Wall de Niantic Spatial, Inc., bajo el <a href="../lib/8thwall/LICENSE">XR Engine License Agreement</a>, sin garantías de ningún tipo.</p>
+  <footer class="pie">
+    <div class="pie-logo"><img src="logo_invercoal.png" alt="INVERCOAL" width="835" height="201"></div>
+    <p>Grupo Invercoal</p>
+  </footer>
 </div>
 
 <div id="xr" hidden>
