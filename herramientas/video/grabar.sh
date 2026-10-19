@@ -11,7 +11,7 @@ sleep 1
 ffmpeg -loglevel error -y -f x11grab -framerate 30 -video_size 1920x1080 -draw_mouse 1 -i $D -c:v libx264 -preset ultrafast -crf 16 -pix_fmt yuv420p "$2" </dev/null >/dev/null 2>&1 &
 FP=$!
 sleep 1
-timeout 1500 qgis --nologo --noversioncheck --noplugins --lang es --profiles-path $R/qp --code "$1" $3 >"$R/qgis.log" 2>&1
+timeout 1500 qgis --nologo --noversioncheck --lang es --profiles-path $R/qp --code "$1" $3 >"$R/qgis.log" 2>&1
 sleep 1; kill -INT $FP; wait $FP
 kill $WP $XP 2>/dev/null
 echo listo; ls -la "$2"

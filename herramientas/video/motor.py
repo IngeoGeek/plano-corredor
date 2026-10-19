@@ -71,13 +71,13 @@ class Motor:
         x, y = self.centro(w, local); yield from self.mover(x, y, dur)
 
     # ---------- clics y teclas reales ----------
-    def clic(self, w, local=None, boton=Qt.LeftButton, doble=False, mover=True, pausa=0.25):
+    def clic(self, w, local=None, boton=Qt.LeftButton, doble=False, mover=True, pausa=0.25, mod=Qt.NoModifier):
         if local is None: local = w.rect().center()
         if mover: yield from self.ir(w, local)
         yield pausa
         x, y = self.centro(w, local); self.ev('clic', x=x, y=y, der=(boton == Qt.RightButton))
-        if doble: QTimer.singleShot(0, lambda: QTest.mouseDClick(w, boton, Qt.NoModifier, local))
-        else: QTimer.singleShot(0, lambda: QTest.mouseClick(w, boton, Qt.NoModifier, local))
+        if doble: QTimer.singleShot(0, lambda: QTest.mouseDClick(w, boton, mod, local))
+        else: QTimer.singleShot(0, lambda: QTest.mouseClick(w, boton, mod, local))
         yield 0.35
     def tecla(self, w, key, mod=Qt.NoModifier, txt=''):
         self.ev('tecla', txt=txt); QTimer.singleShot(0, lambda: QTest.keyClick(w, key, mod)); yield 0.25
@@ -103,6 +103,39 @@ class Motor:
             ev = QWheelEvent(QPointF(local), QPointF(x, yy), QPoint(0, 0), QPoint(0, -120 * sentido), Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False)
             QApplication.sendEvent(vp, ev); yield 0.11
         yield 0.3
+
+    def elegir_combo(self, combo, texto, contiene=True):
+        """Abre el desplegable con un clic real y elige la opción con otro clic real."""
+        i = -1
+        for k in range(combo.count()):
+            t = combo.itemText(k)
+            if (texto.lower() in t.lower()) if contiene else t == texto: i = k; break
+        if i < 0: raise Exception(f'opción {texto!r} no está en {[combo.itemText(k) for k in range(combo.count())]}')
+        if combo.currentIndex() == i:
+            yield from self.clic(combo); QTimer.singleShot(0, combo.hidePopup); yield 0.3; return
+        yield from self.clic(combo)
+        yield 0.5
+        v = combo.view()
+        if v.isVisible():
+            idx = combo.model().index(i, combo.modelColumn(), combo.rootModelIndex()); v.scrollTo(idx); yield 0.3
+            yield from self.clic(v.viewport(), v.visualRect(idx).center())
+        if combo.currentIndex() != i: combo.setCurrentIndex(i)
+        yield 0.3
+    def reemplazar(self, campo, texto, enter=False):
+        """Clic en el campo, selecciona todo, escribe el texto nuevo y sale con Tab (o Enter)."""
+        yield from self.clic(campo)
+        le = campo.lineEdit() if hasattr(campo, 'lineEdit') and campo.lineEdit() else campo
+        QTest.keyClick(le, Qt.Key_A, Qt.ControlModifier); yield 0.2
+        yield from self.escribir(le, texto)
+        QTest.keyClick(le, Qt.Key_Return if enter else Qt.Key_Tab); yield 0.3
+    def cerrar_popups(self, barra=None):
+        for _ in range(4):
+            p = QApplication.activePopupWidget()
+            if p: p.close(); yield 0.15
+        if barra is not None and barra.activeAction():
+            barra.setActiveAction(None); yield 0.1
+    def corte_ini(self): self.ev('corte_ini'); yield 0.05
+    def corte_fin(self): self.ev('corte_fin'); yield 0.05
 
     # ---------- marcas para la edición ----------
     def rect_global(self, w, r=None):

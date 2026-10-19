@@ -128,15 +128,16 @@ def tarjeta_tabla():
     dr.rectangle([0, 0, W, 150], fill=AZUL); dr.text((120, 45), E.TABLA_TITULO, font=fuente('Bold', 58), fill=(255, 255, 255))
     dr.text((W - 120 - fuente('Medium', 30).getlength(f'Capítulo {E.NUM}'), 62), f'Capítulo {E.NUM}', font=fuente('Medium', 30), fill=(180, 210, 228))
     x0, x1, x2, x3 = 120, 1010, 1130, W - 120; y = 200
-    dr.text((x0, y), 'Dato', font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x1, y), 'Paso', font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x2, y), 'Ejemplo', font=fuente('Bold', 30), fill=(90, 100, 110))
+    dr.text((x0, y), getattr(E, 'COL1', 'Dato'), font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x1, y), 'Paso', font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x2, y), 'Ejemplo', font=fuente('Bold', 30), fill=(90, 100, 110))
     y += 56
     for i, (a, b, c) in enumerate(E.TABLA):
         if i % 2 == 0: dr.rectangle([x0 - 20, y - 12, x3 + 20, y + 54], fill=(255, 255, 255))
         dr.text((x0, y), a, font=fuente('Medium', 32), fill=(25, 35, 45)); dr.text((x1, y), b, font=fuente('Medium', 32), fill=(1, 79, 125))
         dr.text((x2, y), c, font=fuente('SemiBold', 32), fill=(25, 35, 45)); y += 70
-    y += 30; dr.rounded_rectangle([x0 - 20, y, x3 + 20, y + 170], 18, fill=(255, 244, 222), outline=NARANJA, width=3)
-    dr.text((x0 + 10, y + 26), 'Comprobación', font=fuente('Bold', 32), fill=(160, 90, 0))
-    dr.text((x0 + 10, y + 74), E.COMPROBACION[0] + '      ' + E.COMPROBACION[1], font=fuente('SemiBold', 36), fill=(40, 30, 10))
+    y += 30; dr.rounded_rectangle([x0 - 20, y, x3 + 20, y + 216], 18, fill=(255, 244, 222), outline=NARANJA, width=3)
+    dr.text((x0 + 10, y + 24), 'Comprobación', font=fuente('Bold', 32), fill=(160, 90, 0))
+    dr.text((x0 + 10, y + 72), E.COMPROBACION[0], font=fuente('SemiBold', 36), fill=(40, 30, 10))
+    dr.text((x0 + 10, y + 128), E.COMPROBACION[1], font=fuente('Bold', 36), fill=(1, 79, 125))
     return np.array(im)[:, :, ::-1].copy()
 def tarjeta_fin():
     im = degradado(); dr = ImageDraw.Draw(im)
