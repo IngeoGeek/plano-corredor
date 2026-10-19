@@ -1,4 +1,4 @@
-# Mapa de alturas relieve.png (16 bits) para el GPS de la página. Uso: python alturas.py W  (lee W/info.json y W/vert_real.npy)
+"""Mapa de alturas relieve.png (16 bits) desde los vértices reales de la malla. Uso: python3 alturas.py W"""
 # Mapa de alturas (relieve.png 16 bits) desde los vértices reales de la malla, sobre la extensión de la ortofoto
 import numpy as np, json, sys
 from PIL import Image
