@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#014f7d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Plano 2D y maqueta 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- Kit manual «Plano QGIS → maqueta 3D, RA, GPS y QR». No hace falta tocar este archivo: todo se ajusta en config.js -->
+<script src="config.js"></script>
+<script type="module" src="lib/model-viewer.min.js"></script>
+<script src="lib/openseadragon.min.js" defer></script>
+<style>
+:root{
+  --bg:#f2f4f6; --surface:#ffffff; --ink:#111518; --muted:#5b6168; --rule:#c9ced3;
+  --accent:#014f7d; --accent-ink:#ffffff; --stage:#e3e7ea; --pin:#d2382b;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1418; --surface:#182027; --ink:#e8edf1; --muted:#9aa4ad; --rule:#2c3640;
+  --accent-ink:#ffffff; --stage:#1a232b; color-scheme:dark}}
+[hidden]{display:none!important}
+html,body{height:100%}
+html,body,.wrap{overflow-anchor:none}
+#hueco{border-radius:10px;background:var(--stage)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 28px}
+body.bloqueo{overflow:hidden}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4vw,2.1rem);letter-spacing:.01em;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:0}
+.sub{color:var(--muted);margin:0}
+.stage{position:relative;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--stage)}
+.vista{display:block;width:100%;height:min(70vh,640px);min-height:360px;background:var(--stage)}
+model-viewer.vista{--poster-color:var(--stage)}
+#osd{background:#f5f6f7}
+.stage.full{position:fixed;inset:0;z-index:50;border:0;border-radius:0;
+  --top-full:env(safe-area-inset-top,0px);--right-full:env(safe-area-inset-right,0px);--left-full:env(safe-area-inset-left,0px)}
+.stage.full .vista{height:100%;min-height:0}
+.herr{position:absolute;top:calc(10px + var(--top-full,0px));right:calc(10px + var(--right-full,0px));display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;z-index:3;max-width:104px}
+.modos{position:absolute;top:calc(10px + var(--top-full,0px));left:calc(10px + var(--left-full,0px));z-index:3;display:inline-flex;
+  border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:0 1px 6px rgb(0 0 0 / .12)}
+.modos button{border:0;background:transparent;color:var(--ink);font:600 14px/1 var(--body);padding:0 14px;height:44px;cursor:pointer}
+.modos button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.icono{width:44px;height:44px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 6px rgb(0 0 0 / .12)}
+.icono svg{width:22px;height:22px}
+.icono[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ar-btn{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:3;
+  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px;max-width:calc(100% - 32px);
+  font:600 16px/1.2 var(--body);text-align:center;cursor:pointer;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
+.ar-btn:focus-visible,.icono:focus-visible,.lnk:focus-visible,.modos button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.yo{width:18px;height:18px;border-radius:50%;background:var(--pin);border:3px solid #fff;box-shadow:0 0 0 2px var(--pin),0 2px 8px rgb(0 0 0 / .35);padding:0;position:relative}
+.yo span{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);white-space:nowrap;background:var(--pin);color:#fff;
+  font:600 12px/1 var(--body);padding:5px 8px;border-radius:6px}
+#aviso{margin:0;color:var(--muted);min-height:1.5em}
+#aviso.ok{color:var(--ink)}
+#aviso.mal{color:#b3261e;font-weight:600}
+.acciones{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.lnk{background:none;border:0;padding:0;color:var(--accent);font:500 15px var(--body);text-decoration:underline;cursor:pointer}
+.lnk:disabled{color:var(--ink);text-decoration:none;cursor:default}
+a{color:var(--accent)}
+@media (prefers-color-scheme: dark){a,.lnk{color:#7cc0ea}}
+.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:0}
+.ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
+.ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.capas{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.capas .titulo-capas{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted);margin-right:4px}
+.capa{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  border-radius:999px;padding:8px 12px;font:500 14px/1 var(--body);cursor:pointer}
+.capa i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--c)}
+.capa[aria-pressed="false"]{color:var(--muted);background:transparent}
+.capa[aria-pressed="false"] i{background:transparent}
+.capa:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.et{pointer-events:none;border:0;background:none;padding:0;width:0;height:0;position:relative;transition:opacity .2s}
+.et:not([data-visible]){opacity:0}
+.et::before{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff}
+.et span{position:absolute;left:0;bottom:9px;transform:translateX(-50%);white-space:nowrap;background:var(--c);color:var(--t,#fff);
+  font:600 10px/1 var(--body);padding:3px 5px;border-radius:4px;box-shadow:0 1px 4px rgb(0 0 0 / .3)}
+.et.sin-texto span{display:none}
+@media (prefers-reduced-motion: reduce){.et{transition:none}}
+.membrete{background:var(--surface);border:1px solid var(--rule);border-top:6px solid var(--accent);border-radius:10px;padding:18px 20px;display:grid;gap:6px}
+.membrete-rol{margin:0;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--muted)}
+.membrete h2{font-size:1.6rem;letter-spacing:.01em;color:var(--ink)}
+.membrete-titulos{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:0}
+.membrete-titulos li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 16px;padding:8px 0;border-top:1px solid var(--rule)}
+.membrete-titulos li span:first-child{font-weight:600}
+.membrete-titulos li span+span{color:var(--muted)}
+.pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding-top:14px;border-top:3px solid var(--accent)}
+.pie-logo{background:#fff;border-radius:8px;padding:8px 12px;line-height:0}
+.pie-logo img{height:44px;width:auto;max-width:100%}
+.pie p{margin:0;font-family:var(--display);font-weight:700;font-size:1.2rem;letter-spacing:.04em;color:var(--accent)}
+@media (prefers-color-scheme: dark){.pie p{color:#7cc0ea}}
+.credito{font-size:12px;color:var(--muted);margin:0}
+#xr{position:fixed;inset:0;z-index:100;background:#000}
+#camerafeed{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:rgb(20 25 23 / .82);color:#e7ebe6}
+#estado{margin:0;font-weight:600}
+.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.boton{border:1px solid #556159;background:transparent;color:#e7ebe6;font:500 14px/1 var(--body);padding:10px 14px;border-radius:8px;cursor:pointer}
+.boton[aria-pressed="true"]{background:#e7ebe6;color:#141917}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="titulo"></h1>
+    <p class="sub" id="subtitulo"></p>
+  </header>
+
+  <div class="stage" id="stage">
+    <model-viewer id="mv" class="vista"
+      ar ar-modes="webxr quick-look" ar-scale="fixed" ar-placement="floor"
+      camera-controls touch-action="pan-y" environment-image="neutral" exposure="0.85" tone-mapping="neutral"
+      shadow-intensity="1" shadow-softness="0.8"
+      camera-orbit="-10deg 52deg auto" min-camera-orbit="auto 5deg 0.15m" max-camera-orbit="auto 88deg 2.6m"
+      field-of-view="32deg" interaction-prompt="auto">
+      <span slot="ar-button" hidden></span>
+      <button class="yo" slot="hotspot-yo" id="yo" data-position="0m 0m 0m" data-normal="0m 1m 0m" hidden><span>Usted está aquí</span></button>
+    </model-viewer>
+    <div id="osd" class="vista" hidden></div>
+    <div class="modos" role="group" aria-label="Tipo de vista">
+      <button id="m-2d" type="button" aria-pressed="false">Plano 2D</button>
+      <button id="m-3d" type="button" aria-pressed="true">Maqueta 3D</button>
+    </div>
+    <div class="herr">
+      <button class="icono" id="btn-mas" type="button" aria-label="Acercar el plano" title="Acercar" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="icono" id="btn-menos" type="button" aria-label="Alejar el plano" title="Alejar" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+      </button>
+      <button class="icono" id="btn-gps" type="button" aria-pressed="false" aria-label="Mostrar mi ubicación" title="Mi ubicación">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+      </button>
+      <button class="icono" id="btn-full" type="button" aria-pressed="false" aria-label="Pantalla completa" title="Pantalla completa">
+        <svg id="ico-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </div>
+    <button class="ar-btn" id="btn-ra" type="button">Ver en tu espacio · tamaño real</button>
+  </div>
+  <div id="hueco" hidden></div>
+  <div id="yo2d" class="yo" hidden><span>Usted está aquí</span></div>
+
+  <div class="capas" id="capas" role="group" aria-label="Etiquetas de la maqueta 3D" hidden>
+    <span class="titulo-capas">Etiquetas 3D</span>
+  </div>
+
+  <p id="aviso" role="status">Cambia entre el plano 2D y la maqueta 3D con los botones de arriba. Gira con un dedo y acerca con dos.</p>
+
+  <div class="acciones">
+    <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
+    <button class="lnk" id="btn-instalar" type="button" hidden>Instalar como aplicación</button>
+    <a id="dl-usdz" download hidden>Descargar maqueta para iPhone (.usdz)</a>
+  </div>
+
+  <dl class="ficha" id="ficha"></dl>
+
+  <section class="membrete" id="membrete" aria-labelledby="elaboro-nombre" hidden>
+    <p class="membrete-rol">Elaboró</p>
+    <h2 id="elaboro-nombre"></h2>
+    <ul class="membrete-titulos" id="elaboro-titulos"></ul>
+  </section>
+
+  <p class="credito">Visor 3D: model-viewer (Google). Plano 2D: OpenSeadragon. En celulares sin el visor de realidad aumentada de Google se usa el motor 8th Wall de Niantic Spatial, Inc., bajo el <a href="lib/8thwall/LICENSE">XR Engine License Agreement</a>, sin garantías de ningún tipo.</p>
+  <footer class="pie" id="pie" hidden>
+    <div class="pie-logo" id="pie-logo"><img id="pie-img" alt=""></div>
+    <p id="pie-texto"></p>
+  </footer>
+</div>
+
+<div id="xr" hidden>
+  <canvas id="camerafeed"></canvas>
+  <div id="hud" role="status">
+    <p id="estado">Cargando…</p>
+    <div class="fila">
+      <button class="boton" id="xr-gps" type="button" aria-pressed="false">Mi ubicación</button>
+      <button class="boton" id="xr-salir" type="button">Salir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const C = self.PLANO;
+const $ = (s) => document.querySelector(s);
+const mv = $('#mv'), stage = $('#stage'), aviso = $('#aviso');
+function avisar(t, tipo){ aviso.textContent = t; aviso.className = tipo || ''; }
+if (!C) { document.body.innerHTML = '<p style="padding:24px;font:16px sans-serif">No se pudo leer <b>config.js</b>. Revisa que esté en la misma carpeta que index.html y que no le falte una coma o una comilla.</p>'; throw new Error('config'); }
+
+// ?modo=navegador → siempre el motor de RA del navegador (celulares sin ARCore)
+const MODO = new URLSearchParams(location.search).get('modo') === 'navegador' ? 'navegador' : 'auto';
+const H = C.hoja, M = C.marco, R = C.relieve, A = C.archivos;
+const ESC = (M.E_max - M.E_min) / (M.ancho_mm / 1000);          // escala del mapa (p. ej. 65 000)
+const FUERZA = (R.z_max - R.z_min) * R.exageracion / ESC;          // altura del relieve en la maqueta (m)
+const BASE_REL = 0.0005;                                           // el relieve va 0,5 mm sobre la hoja
+const cm = (mm) => (mm / 10).toLocaleString('es-CO', {maximumFractionDigits: 1});
+const TAM = `${cm(H.ancho_mm)} × ${cm(H.alto_mm)} cm`;
+
+/* ---------- Textos desde config.js ---------- */
+document.title = `${C.titulo} · Plano 2D y maqueta 3D`;
+$('#titulo').textContent = C.titulo; $('#subtitulo').textContent = C.subtitulo || '';
+if (C.color) { document.documentElement.style.setProperty('--accent', C.color); document.querySelector('meta[name="theme-color"]').content = C.color; }
+mv.setAttribute('alt', `Maqueta en relieve de ${C.titulo}, ${TAM}`);
+if (A.poster) mv.setAttribute('poster', A.poster);
+if (A.modelo_iphone) { mv.setAttribute('ios-src', A.modelo_iphone); $('#dl-usdz').href = A.modelo_iphone; }
+mv.setAttribute('src', A.modelo);
+const ficha = $('#ficha');
+[['Tamaño en RA', `${TAM} (fijo)`], ...(C.ficha || [])].forEach(([t, v]) => {
+  const d = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
+  dt.textContent = t; dd.textContent = v; d.append(dt, dd); ficha.appendChild(d); });
+if (C.elaboro && C.elaboro.nombre) {
+  $('#membrete').hidden = false; $('#elaboro-nombre').textContent = C.elaboro.nombre;
+  (C.elaboro.titulos || []).forEach(([a, b]) => { const li = document.createElement('li'), s1 = document.createElement('span');
+    s1.textContent = a; li.appendChild(s1); if (b) { const s2 = document.createElement('span'); s2.textContent = b; li.appendChild(s2); }
+    $('#elaboro-titulos').appendChild(li); });
+}
+if (C.pie && (C.pie.logo || C.pie.texto)) {
+  $('#pie').hidden = false; $('#pie-texto').textContent = C.pie.texto || '';
+  $('#pie-img').onerror = () => { $('#pie-logo').hidden = true; };
+  if (C.pie.logo) { $('#pie-img').src = C.pie.logo; $('#pie-img').alt = C.pie.texto || 'Logo'; } else $('#pie-logo').hidden = true;
+}
+mv.addEventListener('error', () => avisar(`No se pudo abrir la maqueta «${A.modelo}». Revisa el nombre del archivo en config.js y que esté en la carpeta.`, 'mal'));
+
+/* ---------- Vista 2D / 3D ---------- */
+let visor2d = null, overlay2d = false, PXMM = null;
+function iniciar2d(){
+  if (visor2d || !window.OpenSeadragon) return;
+  const fuente = /\.dzi$/i.test(A.plano2d) ? A.plano2d : {type: 'image', url: A.plano2d};
+  visor2d = OpenSeadragon({ element: document.getElementById('osd'), tileSources: fuente,
+    showNavigationControl: false, maxZoomPixelRatio: 2.5, minZoomImageRatio: 0.9, visibilityRatio: 0.9,
+    constrainDuringPan: true, immediateRender: false, gestureSettingsTouch: {pinchRotate: false, flickEnabled: true},
+    gestureSettingsMouse: {clickToZoom: false, dblClickToZoom: true} });
+  visor2d.addHandler('open', () => { PXMM = visor2d.world.getItemAt(0).getContentSize().x / H.ancho_mm; if (ultimoEN) ponerPin2d(); });
+  visor2d.addHandler('open-failed', () => avisar(`No se pudo abrir el plano 2D «${A.plano2d}». Revisa el nombre en config.js.`, 'mal'));
+}
+function cambiar(v){
+  $('#m-2d').setAttribute('aria-pressed', String(v === '2d')); $('#m-3d').setAttribute('aria-pressed', String(v === '3d'));
+  $('#osd').hidden = v !== '2d'; mv.hidden = v !== '3d'; $('#btn-mas').hidden = $('#btn-menos').hidden = v !== '2d';
+  $('#capas').hidden = v !== '3d' || !$('#capas').querySelector('.capa');
+  if (v === '2d') { iniciar2d(); avisar('Plano 2D: acerca con dos dedos o con doble toque para leer las convenciones y el rótulo.'); }
+  else avisar('Maqueta 3D: gira con un dedo y acerca con dos.');
+}
+$('#m-2d').addEventListener('click', () => cambiar('2d'));
+$('#m-3d').addEventListener('click', () => cambiar('3d'));
+$('#btn-mas').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1.6); visor2d.viewport.applyConstraints(); } });
+$('#btn-menos').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1 / 1.6); visor2d.viewport.applyConstraints(); } });
+
+/* ---------- Del terreno (E, N) a la maqueta y al plano ---------- */
+let ALT = null;   // mapa de alturas leído de relieve.png
+const altPromesa = new Promise((ok) => {
+  const im = new Image(); im.decoding = 'async';
+  im.onload = () => { try { const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const x = c.getContext('2d', {willReadFrequently: true}); x.drawImage(im, 0, 0);
+      ALT = {w: c.width, h: c.height, d: x.getImageData(0, 0, c.width, c.height).data}; } catch (e) {} ok(); };
+  im.onerror = () => ok(); im.src = R.imagen;
+});
+function nivel(E, N){   // 0 a 1 según el gris del mapa de alturas (interpolación bilineal)
+  if (!ALT) return 0;
+  const fx = (E - M.E_min) / (M.E_max - M.E_min) * (ALT.w - 1), fy = (M.N_max - N) / (M.N_max - M.N_min) * (ALT.h - 1);
+  const i = Math.max(0, Math.min(ALT.w - 2, Math.floor(fx))), j = Math.max(0, Math.min(ALT.h - 2, Math.floor(fy))), a = fx - i, b = fy - j;
+  const g = (ii, jj) => ALT.d[(jj * ALT.w + ii) * 4] / 255;
+  return (g(i, j) * (1 - a) + g(i + 1, j) * a) * (1 - b) + (g(i, j + 1) * (1 - a) + g(i + 1, j + 1) * a) * b;
+}
+const dentro = (E, N) => E >= M.E_min && E <= M.E_max && N >= M.N_min && N <= M.N_max;
+function enHoja(E, N){ // milímetros en la hoja, medidos desde la esquina superior izquierda
+  return {x: M.x_mm + (E - M.E_min) / (M.E_max - M.E_min) * M.ancho_mm, y: M.y_mm + (M.N_max - N) / (M.N_max - M.N_min) * M.alto_mm};
+}
+function enMaqueta(E, N){ // metros de la maqueta: x al este, y hacia arriba, z al sur; origen en el centro de la hoja
+  if (!dentro(E, N)) return null; const p = enHoja(E, N);
+  return {x: (p.x - H.ancho_mm / 2) / 1000, y: BASE_REL + nivel(E, N) * FUERZA, z: (p.y - H.alto_mm / 2) / 1000};
+}
+function enPlano(E, N){ if (!dentro(E, N) || !PXMM) return null; const p = enHoja(E, N); return {x: p.x * PXMM, y: p.y * PXMM}; }
+
+/* Transversa de Mercator (sirve para UTM, Origen-Nacional, Gauss-Krüger…) */
+const ELIPSOIDES = {GRS80: [6378137, 1 / 298.257222101], WGS84: [6378137, 1 / 298.257223563], INTERNACIONAL: [6378388, 1 / 297]};
+function aPlanas(lat, lon){
+  const P = C.proyeccion, [a, f] = ELIPSOIDES[(P.elipsoide || 'GRS80').toUpperCase()] || ELIPSOIDES.GRS80, r = Math.PI / 180;
+  const k0 = P.k, lat0 = P.lat_0 * r, lon0 = P.lon_0 * r, FE = P.x_0, FN = P.y_0;
+  const e2 = f * (2 - f), ep2 = e2 / (1 - e2), phi = lat * r, lam = lon * r;
+  const Mf = (p) => a * ((1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 ** 3 / 256) * p - (3 * e2 / 8 + 3 * e2 * e2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * p)
+    + (15 * e2 * e2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * p) - (35 * e2 ** 3 / 3072) * Math.sin(6 * p));
+  const N = a / Math.sqrt(1 - e2 * Math.sin(phi) ** 2), T = Math.tan(phi) ** 2, Cc = ep2 * Math.cos(phi) ** 2, A2 = (lam - lon0) * Math.cos(phi);
+  return [FE + k0 * N * (A2 + (1 - T + Cc) * A2 ** 3 / 6 + (5 - 18 * T + T * T + 72 * Cc - 58 * ep2) * A2 ** 5 / 120),
+          FN + k0 * (Mf(phi) - Mf(lat0) + N * Math.tan(phi) * (A2 * A2 / 2 + (5 - T + 9 * Cc + 4 * Cc * Cc) * A2 ** 4 / 24 + (61 - 58 * T + T * T + 600 * Cc - 330 * ep2) * A2 ** 6 / 720))];
+}
+
+/* ---------- Etiquetas 3D desde los CSV de QGIS ---------- */
+function leerCSV(txt){
+  txt = txt.replace(/^﻿/, ''); const filas = []; let fila = [], campo = '', comillas = false;
+  const sep = (txt.split('\n')[0].split(';').length > txt.split('\n')[0].split(',').length) ? ';' : ',';
+  for (let i = 0; i < txt.length; i++){ const ch = txt[i];
+    if (comillas){ if (ch === '"'){ if (txt[i + 1] === '"'){ campo += '"'; i++; } else comillas = false; } else campo += ch; }
+    else if (ch === '"') comillas = true; else if (ch === sep){ fila.push(campo); campo = ''; }
+    else if (ch === '\n' || ch === '\r'){ if (ch === '\r' && txt[i + 1] === '\n') i++; fila.push(campo); campo = ''; if (fila.some((c) => c !== '')) filas.push(fila); fila = []; }
+    else campo += ch; }
+  if (campo !== '' || fila.length){ fila.push(campo); filas.push(fila); }
+  return filas;
+}
+function crearCapa(g, color){
+  const b = document.createElement('button'); b.className = 'capa'; b.type = 'button'; b.setAttribute('aria-pressed', 'true');
+  b.style.setProperty('--c', color); b.innerHTML = '<i></i>'; b.append(g.grupo);
+  b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on));
+    mv.querySelectorAll(`.et[data-grupo="${CSS.escape(g.grupo)}"]`).forEach((e) => { e.hidden = !on; }); pedirDespeje(); });
+  $('#capas').appendChild(b); $('#capas').hidden = mv.hidden;
+}
+let nEt = 0;
+async function cargarEtiquetas(){
+  await altPromesa; const malos = [];
+  for (const g of (C.etiquetas || [])){
+    try {
+      const r = await fetch(g.archivo); if (!r.ok) throw 0; const filas = leerCSV(await r.text()); const cab = filas.shift().map((c) => c.trim());
+      const iX = cab.findIndex((c) => c.toUpperCase() === 'X'), iY = cab.findIndex((c) => c.toUpperCase() === 'Y'), iN = cab.indexOf(g.campo);
+      if (iX < 0 || iY < 0 || iN < 0) throw 0;
+      const porNombre = new Map();   // un mismo nombre en varios tramos → el punto más central de ese nombre
+      filas.forEach((f) => { const n = (f[iN] || '').trim(), E = parseFloat(f[iX]), N = parseFloat(f[iY]);
+        if (!n || !isFinite(E) || !isFinite(N) || !dentro(E, N)) return; (porNombre.get(n) || porNombre.set(n, []).get(n)).push([E, N]); });
+      if (!porNombre.size) throw 0;
+      const color = g.color || '#c62828'; crearCapa(g, color);
+      porNombre.forEach((pts, n) => {
+        const mE = pts.reduce((s, p) => s + p[0], 0) / pts.length, mN = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+        const [E, N] = pts.reduce((m, p) => Math.hypot(p[0] - mE, p[1] - mN) < Math.hypot(m[0] - mE, m[1] - mN) ? p : m);
+        const q = enMaqueta(E, N), b = document.createElement('button');
+        b.className = 'et'; b.slot = `hotspot-et-${nEt++}`; b.dataset.grupo = g.grupo; b.tabIndex = -1; b.style.setProperty('--c', color);
+        if (/^#(f[0-9a-f]|e[89a-f]|ff)/i.test(color)) b.style.setProperty('--t', '#111518');
+        b.dataset.position = `${q.x}m ${q.y + 0.003}m ${q.z}m`; b.dataset.normal = '0m 1m 0m'; b.dataset.visibilityAttribute = 'visible';
+        const t = document.createElement('span'); t.textContent = n; b.appendChild(t); mv.appendChild(b);
+      });
+    } catch (e) { malos.push(g.archivo); }
+  }
+  if (malos.length) avisar(`No se pudieron leer estas etiquetas: ${malos.join(', ')}. Revisa el nombre del archivo, la columna del nombre (campo) y que el CSV tenga las columnas X e Y.`, 'mal');
+  setTimeout(pedirDespeje, 500);
+}
+cargarEtiquetas();
+let despejePendiente = false;
+function despejar(){   // si dos nombres se tapan, el segundo queda como punto hasta que se acerque la vista
+  despejePendiente = false; const cajas = [];
+  const lista = [...mv.querySelectorAll('.et')].filter((e) => !e.hidden && e.hasAttribute('data-visible'));
+  lista.forEach((e) => e.classList.remove('sin-texto'));
+  for (const e of lista){
+    const r = e.querySelector('span').getBoundingClientRect(); if (!r.width) continue;
+    if (cajas.some((c) => !(r.right + 2 < c.left || r.left - 2 > c.right || r.bottom + 2 < c.top || r.top - 2 > c.bottom))) e.classList.add('sin-texto');
+    else cajas.push(r);
+  }
+}
+function pedirDespeje(){ if (!despejePendiente){ despejePendiente = true; requestAnimationFrame(() => requestAnimationFrame(despejar)); } }
+mv.addEventListener('camera-change', pedirDespeje); mv.addEventListener('load', () => setTimeout(pedirDespeje, 300));
+addEventListener('resize', pedirDespeje);
+
+/* ---------- Pantalla completa ---------- */
+const btnFull = $('#btn-full');
+let scrollPrevio = 0, sostener = 0;
+function volverAlInicio(){
+  const y = scrollPrevio, ir = () => { if (Math.abs(scrollY - y) > 2) scrollTo({top: y, behavior: 'instant'}); };
+  ir(); requestAnimationFrame(ir);
+  const fin = Date.now() + 2000; sostener = fin;
+  const vigilar = () => { if (sostener !== fin || Date.now() > fin) return; ir(); requestAnimationFrame(vigilar); };
+  requestAnimationFrame(vigilar);
+  mv.cameraOrbit = mv.getAttribute('camera-orbit'); mv.cameraTarget = 'auto auto auto'; mv.fieldOfView = mv.getAttribute('field-of-view'); mv.jumpCameraToGoal();
+  if (visor2d) setTimeout(() => visor2d.viewport.goHome(true), 200);
+  setTimeout(pedirDespeje, 300);
+}
+['touchstart', 'wheel', 'keydown'].forEach((ev) => addEventListener(ev, (e) => { if (!stage.contains(e.target)) sostener = 0; }, {passive: true}));
+function marcarFull(on){
+  const antes = stage.classList.contains('full'), hueco = $('#hueco');
+  if (on && !antes){ scrollPrevio = scrollY; hueco.style.height = stage.offsetHeight + 'px'; hueco.hidden = false; }
+  stage.classList.toggle('full', on); document.body.classList.toggle('bloqueo', on);
+  if (!on && antes){ hueco.hidden = true; volverAlInicio(); }
+  btnFull.setAttribute('aria-pressed', String(on)); btnFull.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+  $('#ico-full').innerHTML = on ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
+  mv.setAttribute('touch-action', on ? 'none' : 'pan-y');
+}
+btnFull.addEventListener('click', async () => {
+  const on = !stage.classList.contains('full'); marcarFull(on);
+  try { if (on && stage.requestFullscreen) await stage.requestFullscreen({navigationUI: 'hide'});
+        else if (!on && document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && stage.classList.contains('full')) marcarFull(false); });
+
+/* ---------- GPS ---------- */
+let posModelo = null, posPlano = null, ultimoEN = null, vigilancia = null;
+function ponerPin2d(){
+  if (!visor2d || !visor2d.world.getItemAt(0)) return;
+  if (ultimoEN) posPlano = enPlano(...ultimoEN);
+  const el = $('#yo2d');
+  if (!posPlano){ if (overlay2d){ visor2d.removeOverlay(el); overlay2d = false; } el.hidden = true; return; }
+  const p = visor2d.viewport.imageToViewportCoordinates(posPlano.x, posPlano.y); el.hidden = false;
+  if (overlay2d) visor2d.updateOverlay(el, p, OpenSeadragon.Placement.CENTER);
+  else { visor2d.addOverlay({element: el, location: p, placement: OpenSeadragon.Placement.CENTER}); overlay2d = true; }
+}
+function distanciaKm(E, N){ const dx = Math.max(M.E_min - E, 0, E - M.E_max), dy = Math.max(M.N_min - N, 0, N - M.N_max); return Math.hypot(dx, dy) / 1000; }
+function alPosicion(p){
+  const [E, N] = aPlanas(p.coords.latitude, p.coords.longitude); ultimoEN = [E, N];
+  const prec = Math.round(p.coords.accuracy || 0);
+  posModelo = enMaqueta(E, N); posPlano = enPlano(E, N);
+  if (posModelo){ mv.updateHotspot({name: 'hotspot-yo', position: `${posModelo.x}m ${posModelo.y + 0.002}m ${posModelo.z}m`}); $('#yo').hidden = false; }
+  else $('#yo').hidden = true;
+  ponerPin2d();
+  if (dentro(E, N)) avisar(`Usted está aquí: E ${Math.round(E).toLocaleString('es-CO')} · N ${Math.round(N).toLocaleString('es-CO')} (±${prec} m).`, 'ok');
+  else avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
+  if (window.__pinAR) window.__pinAR();
+}
+function alError(e){
+  avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador.'
+                      : 'Todavía no hay señal de GPS. Si estás bajo techo, acércate a una ventana o sal al aire libre.');
+}
+// Prueba sin salir a campo: …/index.html?prueba=6.2105,-73.8133 simula esa posición al tocar el botón de ubicación
+const PRUEBA = (new URLSearchParams(location.search).get('prueba') || '').split(',').map(Number);
+async function gps(on){
+  $('#btn-gps').setAttribute('aria-pressed', String(on)); $('#xr-gps').setAttribute('aria-pressed', String(on));
+  if (!on){ if (vigilancia !== null) navigator.geolocation.clearWatch(vigilancia); vigilancia = null; posModelo = null; posPlano = null; ultimoEN = null;
+    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada.'); return; }
+  await altPromesa;
+  if (PRUEBA.length === 2 && PRUEBA.every(isFinite)) { alPosicion({coords: {latitude: PRUEBA[0], longitude: PRUEBA[1], accuracy: 0}}); return; }
+  if (!('geolocation' in navigator)){ avisar('Este navegador no permite usar la ubicación.'); return; }
+  avisar('Buscando tu posición con el GPS…');
+  vigilancia = navigator.geolocation.watchPosition(alPosicion, alError, {enableHighAccuracy: true, maximumAge: 5000, timeout: 30000});
+}
+$('#btn-gps').addEventListener('click', () => gps($('#btn-gps').getAttribute('aria-pressed') !== 'true'));
+$('#xr-gps').addEventListener('click', () => gps($('#xr-gps').getAttribute('aria-pressed') !== 'true'));
+
+/* ---------- Ver en tu espacio ---------- */
+function cargarScript(src, attrs){ return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src;
+  Object.entries(attrs || {}).forEach(([k, v]) => s.setAttribute(k, v)); s.onload = ok; s.onerror = mal; document.head.appendChild(s); }); }
+async function cargarMotor(){
+  if (!window.THREE){ await cargarScript('lib/three/three.min.js'); await cargarScript('lib/three/GLTFLoader.js'); }
+  if (!window.XR8){
+    await new Promise((ok, mal) => { window.addEventListener('xrloaded', ok, {once: true});
+      cargarScript('lib/8thwall/xr.js', {'data-preload-chunks': 'slam'}).catch(mal); setTimeout(() => mal(new Error('tiempo')), 60000); });
+  }
+  if (XR8.loadChunk) { try { await XR8.loadChunk('slam'); } catch (e) {} }
+}
+const estado = $('#estado');
+let enRA = false;
+function escenaRA(){
+  let soporte = null, colocado = false, listo = false, pin = null;
+  function colocar(p, cam){ soporte.position.set(p.x, 0.004, p.z);
+    soporte.rotation.y = Math.atan2(cam.position.x - p.x, cam.position.z - p.z); soporte.visible = true; colocado = true;
+    estado.textContent = `Maqueta a ${TAM}. Toca el piso para moverla; arrastra un dedo para girarla.`; }
+  window.__pinAR = () => { if (!pin) return; pin.visible = !!posModelo; if (posModelo) pin.position.set(posModelo.x, posModelo.y, posModelo.z); };
+  return {
+    name: 'maqueta-plano',
+    onStart: () => {
+      const {scene, camera, renderer} = XR8.Threejs.xrScene();
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x7d776c, 0.55));
+      const sol = new THREE.DirectionalLight(0xfff6e8, 0.6); sol.position.set(-1, 3, 1.5); scene.add(sol);
+      camera.position.set(0, 1.4, 0);
+      XR8.XrController.updateCameraProjectionMatrix({origin: camera.position, facing: camera.quaternion});
+      soporte = new THREE.Group(); soporte.visible = false; scene.add(soporte);
+      const sombra = new THREE.Mesh(new THREE.PlaneGeometry(H.ancho_mm / 1000 + 0.08, H.alto_mm / 1000 + 0.08), new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false}));
+      sombra.rotation.x = -Math.PI / 2; sombra.position.y = -0.0035; soporte.add(sombra);
+      pin = new THREE.Group();
+      const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.035, 8), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      palo.position.y = 0.0175; pin.add(palo);
+      const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.007, 16, 12), new THREE.MeshBasicMaterial({color: 0xd2382b}));
+      cabeza.position.y = 0.037; pin.add(cabeza); pin.visible = false; soporte.add(pin); window.__pinAR();
+      estado.textContent = 'Cargando la maqueta…';
+      new THREE.GLTFLoader().load(A.modelo, (g) => { soporte.add(g.scene);
+        if (!colocado) estado.textContent = 'Apunta al piso y mueve el celular despacio de lado a lado…'; },
+        undefined, () => { estado.textContent = 'No se pudo cargar la maqueta.'; });
+      const piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), rayo = new THREE.Raycaster(), v = new THREE.Vector2();
+      const lienzo = $('#camerafeed'); let x0 = null, giro0 = 0, movio = false;
+      lienzo.ontouchstart = (e) => { if (e.touches.length === 1){ x0 = e.touches[0].clientX; giro0 = soporte.rotation.y; movio = false; } };
+      lienzo.ontouchmove = (e) => { if (x0 !== null && colocado){ const dx = e.touches[0].clientX - x0; if (Math.abs(dx) > 8) movio = true; soporte.rotation.y = giro0 + dx * 0.01; } };
+      lienzo.ontouchend = (e) => { const t = e.changedTouches[0], fue = movio; x0 = null; if (fue) return;
+        v.set((t.clientX / innerWidth) * 2 - 1, -(t.clientY / innerHeight) * 2 + 1); rayo.setFromCamera(v, camera);
+        const p = new THREE.Vector3(); if (rayo.ray.intersectPlane(piso, p)) colocar(p, camera); };
+    },
+    onUpdate: ({processCpuResult}) => {
+      const r = processCpuResult && processCpuResult.reality; if (!r) return;
+      if (r.trackingStatus === 'NORMAL' && !listo){ listo = true;
+        if (!colocado){ const {camera} = XR8.Threejs.xrScene(); const d = new THREE.Vector3(); camera.getWorldDirection(d); d.y = 0; d.normalize();
+          const p = camera.position.clone().addScaledVector(d, 1.2); colocar(p, camera); } }
+    },
+    onCameraStatusChange: (ev) => { if (ev.status === 'failed') estado.textContent = 'No se pudo abrir la cámara. Revisa los permisos del navegador.'; },
+  };
+}
+function ajustarLienzo(){ const c = $('#camerafeed'), dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); }
+async function raNavegador(){
+  const permisos = [];
+  if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) permisos.push(DeviceMotionEvent.requestPermission().catch(() => {}));
+  if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) permisos.push(DeviceOrientationEvent.requestPermission().catch(() => {}));
+  salirDeFull();
+  $('#xr').hidden = false; document.body.classList.add('bloqueo'); estado.textContent = 'Cargando el motor de realidad aumentada…';
+  await Promise.all(permisos);
+  try { await cargarMotor(); } catch (e) { estado.textContent = 'No se pudo cargar el motor de realidad aumentada. Revisa la conexión.'; return; }
+  mv.removeAttribute('src');
+  ajustarLienzo(); addEventListener('resize', ajustarLienzo);
+  XR8.XrController.configure({scale: 'absolute'});
+  XR8.addCameraPipelineModules([XR8.XrController.pipelineModule(), XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), escenaRA()]);
+  XR8.run({canvas: $('#camerafeed')}); enRA = true;
+  setTimeout(() => { if (enRA && /Apunta|Cargando/.test(estado.textContent)) estado.textContent = 'Si la maqueta no aparece, sigue moviendo el celular o toca el piso para colocarla.'; }, 15000);
+}
+$('#xr-salir').addEventListener('click', () => {
+  if (window.XR8 && enRA){ XR8.stop(); XR8.clearCameraPipelineModules(); }
+  enRA = false; window.__pinAR = null; removeEventListener('resize', ajustarLienzo);
+  $('#xr').hidden = true; document.body.classList.remove('bloqueo'); mv.setAttribute('src', A.modelo);
+});
+// RA nativa solo en iPhone/iPad (Quick Look) o Android con ARCore (WebXR); en los demás, motor en el navegador
+const ES_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let XR_NATIVO = false;
+if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then((v) => { XR_NATIVO = v; }).catch(() => {});
+function salirDeFull(){
+  if (stage.classList.contains('full')) marcarFull(false);
+  if (document.fullscreenElement) { try { document.exitFullscreen().catch(() => {}); } catch (e) {} }
+}
+$('#btn-ra').addEventListener('click', () => {
+  if (MODO === 'auto' && (ES_IOS || XR_NATIVO) && mv.canActivateAR) { salirDeFull(); mv.activateAR(); return; }
+  raNavegador();
+});
+if (ES_IOS && A.modelo_iphone) { $('#dl-usdz').hidden = false;
+  $('#dl-usdz').title = 'Guárdalo en Archivos y ábrelo desde allí para ponerlo en tu espacio aunque no tengas conexión'; }
+
+/* ---------- Sin internet ---------- */
+const btnOff = $('#btn-offline'), MARCA = `marca-guardado-v${C.version}`;
+function marcarGuardado(fechaIso){
+  const f = fechaIso ? new Date(fechaIso).toLocaleDateString('es-CO', {day: 'numeric', month: 'short'}) : '';
+  btnOff.textContent = `Guardado${f ? ' el ' + f : ''}: disponible sin internet ✓`; btnOff.disabled = true;
+}
+async function revisarGuardado(){
+  try { const r = await caches.match(MARCA); if (r) marcarGuardado(await r.text()); } catch (e) {}
+}
+if ('serviceWorker' in navigator && 'caches' in window && location.protocol !== 'file:'){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  revisarGuardado(); navigator.serviceWorker.ready.then(() => setTimeout(revisarGuardado, 800));
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data === 'guardado'){ marcarGuardado(new Date().toISOString()); avisar('Listo. La próxima vez esta página abre aunque no tengas conexión.', 'ok'); }
+    if (typeof e.data === 'string' && e.data.startsWith('error')){ btnOff.disabled = false; btnOff.textContent = 'Guardar para usar sin internet';
+      const det = e.data.slice(6); avisar(det && !/fetch|network/i.test(det) ? `No se pudo guardar: faltan estos archivos en la carpeta publicada: ${det}.` : 'No se pudo guardar todo. Inténtalo de nuevo con buena conexión.', 'mal'); }
+  });
+  btnOff.addEventListener('click', async () => {
+    btnOff.disabled = true; btnOff.textContent = 'Guardando… (puede tardar unos minutos, no cierres la página)';
+    const reg = await navigator.serviceWorker.ready; reg.active.postMessage('guardarTodo');
+  });
+} else { btnOff.hidden = true; }
+let pedidoInstalar = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; $('#btn-instalar').hidden = false; });
+$('#btn-instalar').addEventListener('click', async () => { if (!pedidoInstalar) return; pedidoInstalar.prompt();
+  const r = await pedidoInstalar.userChoice; pedidoInstalar = null; $('#btn-instalar').hidden = true;
+  if (r.outcome === 'accepted') avisar('Listo: abre el plano desde el ícono de tu pantalla principal, también sin internet.', 'ok'); });
+</script>
+</body>
+</html>

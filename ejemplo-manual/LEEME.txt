@@ -1,0 +1,28 @@
+KIT MANUAL · Plano de QGIS → plano 2D, maqueta 3D, realidad aumentada, GPS y QR
+================================================================================
+
+Esta carpeta es la página web lista. Solo se edita config.js (con el Bloc de notas,
+Notepad++ o Visual Studio Code) y se agregan los archivos que produces en QGIS y Blender:
+
+  plano_relieve.glb     maqueta para Android y computador (Blender → Exportar glTF .glb)
+  plano_relieve.usdz    maqueta para iPhone (Blender → Exportar USD, con extensión .usdz)
+  relieve.png           mapa de alturas en 16 bits (QGIS → Traducir, -scale zmin zmax 0 65535)
+  plano2d/plano.dzi     teselas del plano 2D (vips dzsave) … o una sola imagen plano.jpg
+  etiquetas/*.csv       (opcional) puntos con nombre exportados desde QGIS con GEOMETRY=AS_XY
+  logo.png              (opcional) logo del pie de página
+
+No cambies los nombres de index.html, config.js, sw.js ni de la carpeta lib.
+config.js trae los valores del ejemplo (Corredor Carbonífero de Santander): reemplázalos por los tuyos.
+
+Probar en el computador antes de publicar (hace falta un servidor; abrir el archivo con doble clic no basta):
+  1. Abre una terminal en esta carpeta.
+  2. Escribe:  python -m http.server 8000
+  3. En el navegador entra a  http://localhost:8000/
+  4. Para probar el GPS sin salir a campo:  http://localhost:8000/?prueba=6.2222,-73.8132
+     (cambia la latitud y longitud por un punto conocido de tu plano)
+
+Publicar: sube TODO el contenido de esta carpeta a un repositorio de GitHub y activa Pages
+(Settings → Pages → Deploy from a branch → main / root).
+
+Librerías incluidas: model-viewer (Apache 2.0), OpenSeadragon (BSD-3), three.js (MIT) y el motor
+8th Wall de Niantic Spatial, Inc. (ver lib/8thwall/LICENSE). Guía completa paso a paso: ver el documento que acompaña el kit.
