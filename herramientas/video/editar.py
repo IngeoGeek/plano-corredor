@@ -128,7 +128,7 @@ def tarjeta_tabla():
     dr.rectangle([0, 0, W, 150], fill=AZUL); dr.text((120, 45), E.TABLA_TITULO, font=fuente('Bold', 58), fill=(255, 255, 255))
     dr.text((W - 120 - fuente('Medium', 30).getlength(f'Capítulo {E.NUM}'), 62), f'Capítulo {E.NUM}', font=fuente('Medium', 30), fill=(180, 210, 228))
     x0, x1, x2, x3 = 120, 1010, 1130, W - 120; y = 200
-    dr.text((x0, y), getattr(E, 'COL1', 'Dato'), font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x1, y), 'Paso', font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x2, y), 'Ejemplo', font=fuente('Bold', 30), fill=(90, 100, 110))
+    dr.text((x0, y), getattr(E, 'COL1', 'Dato'), font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x1, y), getattr(E, 'COL2', 'Paso'), font=fuente('Bold', 30), fill=(90, 100, 110)); dr.text((x2, y), 'Ejemplo', font=fuente('Bold', 30), fill=(90, 100, 110))
     y += 56
     for i, (a, b, c) in enumerate(E.TABLA):
         if i % 2 == 0: dr.rectangle([x0 - 20, y - 12, x3 + 20, y + 54], fill=(255, 255, 255))

@@ -1,0 +1,18 @@
+SEG = [
+ ('t0', 'Capítulo 4. Mapa de alturas y medidas para Blender.', 'Capítulo cuatro. Mapa de alturas, y medidas para Blénder.'),
+ ('s01', 'Blender levanta el relieve leyendo una imagen en escala de grises: negro es la cota mínima y blanco la máxima. Esa imagen debe ser de 16 bits: con 8 bits solo hay 256 tonos y el relieve sale en escalones. La misma imagen la usa la página para poner el GPS a la altura correcta.',
+         'Blénder levanta el relieve leyendo una imagen en escala de grises: negro es la cota mínima, y blanco la máxima. Esa imagen debe ser de dieciséis bits: con ocho bits solo hay doscientos cincuenta y seis tonos, y el relieve sale en escalones. La misma imagen la usa la página para poner el ge pe ese a la altura correcta.'),
+ ('s02', 'Ve a Ráster, Conversión, Traducir.', None),
+ ('s03', 'Capa de entrada: dem_suave.', 'Capa de entrada: dem suave.'),
+ ('s04', 'Abre los parámetros avanzados. En Parámetros adicionales de línea de órdenes escribe -scale 100 2000 0 65535: tus cotas mínima y máxima, y el rango completo de 16 bits.',
+         'Abre los parámetros avanzados. En el cuadro de Parámetros adicionales de línea de órdenes, escribe lo que ves en pantalla: guion escéil, cien, dos mil, cero, sesenta y cinco mil quinientos treinta y cinco. Es decir, tus cotas mínima y máxima, y el rango completo de dieciséis bits.'),
+ ('s05', 'En Tipo de datos de salida elige UInt16.', 'En Tipo de datos de salida, elige: u, int, dieciséis.'),
+ ('s06', 'En Convertido, guarda el archivo como relieve.png, con la extensión .png.', 'En Convertido, guarda el archivo como, relieve punto pe ene ge, con esa extensión.'),
+ ('s07', 'Abajo, en Llamada a la consola de GDAL/OGR, revisa que aparezcan -ot UInt16, -of PNG y -scale. Pulsa Ejecutar.',
+         'Abajo, en Llamada a la consola de, ge dal, revisa que aparezcan: guion o te, u int dieciséis; guion o efe, pe ene ge; y guion escéil. Pulsa Ejecutar.'),
+ ('s08', 'Al terminar, cierra. La imagen sale de 1415 por 1233 píxeles, en grises. Cópiala también a la carpeta sitio, porque la página la necesita.',
+         'Al terminar, cierra. La imagen sale de mil cuatrocientos quince por mil doscientos treinta y tres píxeles, en grises. Cópiala también a la carpeta sitio, porque la página la necesita.'),
+ ('t1', 'Ahora calcula las medidas para Blender. La maqueta se arma en metros del objeto físico: la hoja mide 0,9 por 0,6 metros, igual que el plano impreso. La fuerza del relieve es la diferencia de cotas por la exageración vertical, dividida por la escala: 1900 por 2,5 entre 65 000 da 0,073 metros. Con exageración 1 el relieve se ve casi plano; con más de 3, los nombres se estiran en las laderas. La posición del relieve sale de la posición y el tamaño del mapa en la hoja: en el ejemplo, −102,86 milímetros en X, 0 en Y y 0,5 en Z, para que la hoja y el relieve no parpadeen donde se tocan.',
+        'Ahora calcula las medidas para Blénder. La maqueta se arma en metros del objeto físico: la hoja mide cero coma nueve por cero coma seis metros, igual que el plano impreso. La fuerza del relieve es la diferencia de cotas, por la exageración vertical, dividida por la escala: mil novecientos, por dos coma cinco, entre sesenta y cinco mil, da cero coma cero siete tres metros. Con exageración uno, el relieve se ve casi plano; con más de tres, los nombres se estiran en las laderas. La posición del relieve sale de la posición y el tamaño del mapa en la hoja: en el ejemplo, menos ciento dos coma ochenta y seis milímetros en equis, cero en ye, y cero coma cinco en zeta, para que la hoja y el relieve no parpadeen donde se tocan.'),
+ ('t2', 'En el capítulo 5 construimos la maqueta en Blender.', 'En el capítulo cinco construimos la maqueta en Blénder.'),
+]
