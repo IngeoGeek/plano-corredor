@@ -7,6 +7,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/rec')
 import sincro
 
 C = sys.argv[1]; RAPIDO = '--rapido' in sys.argv
+def opcion(n, por=None):
+    return sys.argv[sys.argv.index(n) + 1] if n in sys.argv else por
+BRUTO = opcion('--bruto', 'bruto.mp4'); EVENTOS = opcion('--eventos', 'eventos.jsonl'); SALIDA = opcion('--salida')
+SIN_TITULO = '--sin-titulo' in sys.argv; SIN_FINAL = '--sin-final' in sys.argv
 def cargar(n):
     s = importlib.util.spec_from_file_location(n, f'{C}/{n}.py'); m = importlib.util.module_from_spec(s); s.loader.exec_module(m); return m
 G = cargar('guion'); E = cargar('edicion')
@@ -17,14 +21,36 @@ def fuente(peso, t): return ImageFont.truetype(F + peso + '.otf', t)
 DUR = json.load(open(C + '/duraciones.json')); TXT = {s: (sub, voz) for s, sub, voz in G.SEG}
 
 # ---------------- sincronía ----------------
-d, td, EV = sincro.desfase(C + '/bruto.mp4', C + '/eventos.jsonl')
+d, td, EV = sincro.desfase(C + '/' + BRUTO, C + '/' + EVENTOS)
 def vt(t): return t - td + d                          # hora del registro → segundo del video bruto
 segs = [e for e in EV if e['tipo'] == 'seg']; fin = [e for e in EV if e['tipo'] == 'fin'][0]
 A = vt(segs[0]['t']) - 0.6; B = vt(fin['t']) + 0.6
-L0 = DUR['t0'] + 1.4                                  # tarjeta de título
+L0 = 0 if SIN_TITULO else DUR['t0'] + 1.4               # tarjeta de título
 O = L0                                                # inicio de la pantalla en el video final
-def out(v): return O + (v - A)
-T1 = O + (B - A); L1 = DUR['t1'] + 1.2; T2 = T1 + L1; L2 = DUR['t2'] + 2.2; TOTAL = T2 + L2
+# Mapa de tiempo: los tramos en que la pantalla tarda mucho más que la narración se aceleran
+TRAMOS = []                                           # (v0, v1, factor)
+lim = [A] + [vt(e['t']) for e in segs] + [B]
+for k in range(len(lim) - 1):
+    v0, v1 = lim[k], lim[k + 1]
+    if k == 0: TRAMOS.append((v0, v1, 1.0)); continue
+    obj = DUR[segs[k - 1]['id']] + 0.9
+    f = (v1 - v0) / obj if (v1 - v0) > obj * 1.25 else 1.0
+    TRAMOS.append((v0, v1, min(f, 4.0)))
+def out(v):
+    t = O
+    for v0, v1, f in TRAMOS:
+        if v <= v0: break
+        t += (min(v, v1) - v0) / f
+    return t
+def vid(t):
+    """Segundo del video bruto que corresponde al segundo t de la pantalla editada (desde O)."""
+    acc = O
+    for v0, v1, f in TRAMOS:
+        L = (v1 - v0) / f
+        if t <= acc + L: return v0 + (t - acc) * f, f
+        acc += L
+    return B, 1.0
+T1 = out(B); L1 = 0 if SIN_FINAL else DUR['t1'] + 1.2; T2 = T1 + L1; L2 = 0 if SIN_FINAL else DUR['t2'] + 2.2; TOTAL = T2 + L2
 
 # ---------------- cámara virtual ----------------
 def objetivo(r, esc=None):
@@ -156,9 +182,9 @@ def poner(sid, t):
     tot = sum(len(f) for f in frases); t0 = t + 0.08; dd = DUR[sid] - 0.25
     for f in frases:
         du = dd * len(f) / tot; CUES.append((t0, t0 + du, f)); t0 += du
-poner('t0', 0.6)
+if not SIN_TITULO: poner('t0', 0.6)
 for e in segs: poner(e['id'], out(vt(e['t'])))
-poner('t1', T1 + 0.5); poner('t2', T2 + 0.5)
+if not SIN_FINAL: poner('t1', T1 + 0.5); poner('t2', T2 + 0.5)
 m = np.abs(pista).max(); pista = pista / m * 0.89 if m > 0 else pista
 sf.write(C + '/narracion.wav', pista, SR)
 def ts(x): h = int(x // 3600); mi = int(x % 3600 // 60); s = x % 60; return f'{h:02d}:{mi:02d}:{s:06.3f}'.replace('.', ',')
@@ -166,7 +192,7 @@ with open(C + '/subtitulos.srt', 'w', encoding='utf-8') as f:
     for i, (a, b, t) in enumerate(CUES, 1): f.write(f'{i}\n{ts(a)} --> {ts(b)}\n{t}\n\n')
 
 # ---------------- render ----------------
-salida = f'{C}/capitulo_{E.NUM}.mp4'
+salida = f'{C}/' + (SALIDA or f'capitulo_{E.NUM}.mp4')
 ff = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-',
                        '-i', C + '/narracion.wav', '-i', C + '/subtitulos.srt', '-map', '0:v', '-map', '1:a', '-map', '2:s',
                        '-c:v', 'libx264', '-preset', 'ultrafast' if RAPIDO else 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
@@ -174,15 +200,26 @@ ff = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'rawvideo', '
 def fundido(img, n, entrada=0.4, salida_=0.4):
     for i in range(n):
         t = i / FPS; a = min(1, t / entrada, (n / FPS - t) / salida_); ff.stdin.write((img * a).astype(np.uint8).tobytes())
-fundido(tarjeta_titulo(), int(L0 * FPS))
-cap = cv2.VideoCapture(C + '/bruto.mp4'); fps_b = cap.get(cv2.CAP_PROP_FPS)
-cap.set(cv2.CAP_PROP_POS_FRAMES, int(A * fps_b)); n_scr = int((B - A) * FPS); ultimo = None
+if not SIN_TITULO: fundido(tarjeta_titulo(), int(L0 * FPS))
+cap = cv2.VideoCapture(C + '/' + BRUTO); fps_b = cap.get(cv2.CAP_PROP_FPS)
+cap.set(cv2.CAP_PROP_POS_FRAMES, int(A * fps_b)); idx = int(A * fps_b) - 1; fr = None
+n_scr = int((T1 - O) * FPS)
+VEL = {}
 for i in range(n_scr):
-    v = A + i / FPS; ok, fr = cap.read()
-    if not ok: fr = ultimo
-    ultimo = fr; x0, y0, s = camara(v)
-    out_fr = cv2.warpAffine(fr, np.float32([[s, 0, -s * x0], [0, s, -s * y0]]), (W, H), flags=cv2.INTER_CUBIC if s > 1.01 else cv2.INTER_LINEAR)
+    v, f = vid(O + i / FPS)
+    objetivo_i = int(v * fps_b)
+    while idx < objetivo_i:
+        ok, nf = cap.read(); idx += 1
+        if ok: fr = nf
+        else: break
+    x0, y0, s_ = camara(v)
+    out_fr = cv2.warpAffine(fr, np.float32([[s_, 0, -s_ * x0], [0, s_, -s_ * y0]]), (W, H), flags=cv2.INTER_CUBIC if s_ > 1.01 else cv2.INTER_LINEAR)
     capa(out_fr, v)
-    a = min(1, (i / FPS) / 0.4, (n_scr - i) / FPS / 0.4); ff.stdin.write((out_fr * a).astype(np.uint8).tobytes() if a < 1 else out_fr.tobytes())
-fundido(tarjeta_tabla(), int(L1 * FPS)); fundido(tarjeta_fin(), int(L2 * FPS), salida_=1.0)
+    if round(f) >= 2:
+        k = round(f)
+        if k not in VEL: VEL[k] = etiqueta(f'Acelerado ×{k}', 30, fondo=(20, 24, 30, 200))
+        pegar(out_fr, VEL[k], W - VEL[k].shape[1] - 40, 40)
+    a = min(1, (i / FPS) / 0.4, (n_scr - i) / FPS / 0.4) if not (SIN_TITULO or SIN_FINAL) else min(1, ((i / FPS) / 0.4) if not SIN_TITULO else 1, ((n_scr - i) / FPS / 0.4) if not SIN_FINAL else 1)
+    ff.stdin.write((out_fr * a).astype(np.uint8).tobytes() if a < 1 else out_fr.tobytes())
+if not SIN_FINAL: fundido(tarjeta_tabla(), int(L1 * FPS)); fundido(tarjeta_fin(), int(L2 * FPS), salida_=1.0)
 ff.stdin.close(); ff.wait(); print(salida, round(TOTAL, 1), 's')

@@ -158,6 +158,8 @@ def guion():
         aviso('plano por bpy')
         with MB.ov(): bpy.ops.mesh.primitive_plane_add(size=1)
     hoja = bpy.context.object; hoja.name = 'Hoja'
+    yield from m.tecla('KP_Decimal', 'Num .'); yield 0.8
+    for _ in range(4): m.xdo('click', 5); yield 0.15
     # s05: N y dimensiones
     yield from m.seg('s05')
     yield from m.tecla('n', 'N'); yield 1.0
@@ -217,9 +219,6 @@ def guion():
     sol.thickness = 0.004; sol.offset = -1; sol.material_offset_rim = 1
     yield from m.alejar()
     yield 1.0
-    # vista de la hoja
-    with MB.ov():
-        bpy.ops.view3d.view_selected()
     # s13: rejilla
     yield from m.seg('s13')
     yield from m.mover(700, 560, 0.8)
@@ -234,21 +233,11 @@ def guion():
     rej.name = 'Relieve'
     # s14: panel Add Grid
     yield from m.seg('s14')
-    yield from m.mover(520, 560, 0.6)
-    yield from m.tecla('F9', 'F9'); yield 1.0
-    reg = (250, 250, 1330, 800)
-    yield 0.5
-    regv = (800, 400, 540, 650)
-    subs = sorted([q for q in (buscar('10', regv, True) or []) if q[2] < 30], key=lambda q: q[1])
-    tam = sorted(buscar('2000', regv, True) or [], key=lambda q: q[1])
-    tam = [q for q in tam if subs and q[1] > subs[-1][1]][:1]
-    objetivos = list(zip(subs[:2], ('600', '522'))) + ([(tam[0], '1m')] if tam else [])
-    if len(subs) < 2:
-        aviso('campos de Add Grid por posición fija')
-        objetivos = [((1252, 588, 40, 18), '600'), ((1252, 613, 40, 18), '522'), ((1252, 638, 40, 18), '1m')]
-    for i, (q, val) in enumerate(objetivos):
-        if i == 0: yield from m.zoom((q[0] - 300, q[1] - 40, 460, 260))
-        yield from m.editar_campo(m.centro(q)[0], m.centro(q)[1], val); yield 1.0
+    yield from m.clic(119, 960); yield 1.0
+    yield from m.zoom((60, 640, 420, 140))
+    for (x, y), val in (((306, 699), '600'), ((306, 725), '522'), ((306, 751), '1m')):
+        yield from m.editar_campo(x, y, val); yield 1.2
+    yield from m.resaltar((236, 686, 140, 78), 3, '1')
     m.xdo('mousemove', 520, 900); yield 0.8
     yield from m.alejar()
     rej = bpy.context.object

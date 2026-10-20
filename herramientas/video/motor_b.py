@@ -76,7 +76,7 @@ class MotorB:
         pal = texto.lower().split(); res = []
         for i in range(len(filas) - len(pal) + 1):
             grupo = filas[i:i + len(pal)]
-            if all(p in g['text'].lower() for p, g in zip(pal, grupo)) and len({g['block_num'] + g['par_num'] + g['line_num'] for g in grupo}) == 1:
+            if all(((g['text'].lower().strip(':.,') == p) if len(p) <= 2 else (p in g['text'].lower())) for p, g in zip(pal, grupo)) and len({g['block_num'] + g['par_num'] + g['line_num'] for g in grupo}) == 1:
                 x0 = min(int(g['left']) for g in grupo); y0 = min(int(g['top']) for g in grupo)
                 x1 = max(int(g['left']) + int(g['width']) for g in grupo); y1 = max(int(g['top']) + int(g['height']) for g in grupo)
                 res.append((ox + x0 // esc, oy + y0 // esc, (x1 - x0) // esc, (y1 - y0) // esc))
