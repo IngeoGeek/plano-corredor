@@ -3,7 +3,7 @@ importScripts('config.js');
 const C = self.PLANO, CACHE = `plano-v${C.version}`, MARCA = `marca-guardado-v${C.version}`;
 const A = C.archivos;
 const BASE = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png',
-  'lib/model-viewer.min.js', 'lib/openseadragon.min.js', A.modelo, C.relieve.imagen, A.plano2d]
+  'lib/model-viewer.min.js', 'lib/openseadragon.min.js', 'lib/gps-campo.js', A.modelo, C.relieve.imagen, A.plano2d]
   .concat([A.modelo_iphone, A.poster, C.pie && C.pie.logo].filter(Boolean))
   .concat((C.etiquetas || []).map((e) => e.archivo));
 const MOTOR = ['lib/three/three.min.js', 'lib/three/GLTFLoader.js', 'lib/8thwall/xr.js', 'lib/8thwall/xr-slam.js', 'lib/8thwall/resources/media-worker.js'];
@@ -42,11 +42,19 @@ self.addEventListener('message', (e) => {
   e.waitUntil(guardarTodo().then(() => e.source.postMessage('guardado')).catch((err) => e.source.postMessage('error:' + err.message)));
 });
 // Primero la red (siempre lo más nuevo); sin conexión, la copia guardada
+// Primero la red (siempre lo más reciente); si no hay conexión, la copia guardada. Si hay copia y la red tarda
+// más de 4 s (señal débil en campo), se usa la copia y la red la actualiza por detrás para la próxima vez.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin || req.headers.has('range')) return;
-  e.respondWith(fetch(req).then((res) => {
-    if (res.ok && res.type === 'basic') { const copia = res.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); }
-    return res;
-  }).catch(() => caches.match(req, {ignoreSearch: true}).then((hit) => hit || Response.error())));
+  e.respondWith((async () => {
+    const red = fetch(req).then((res) => {
+      if (res.ok && res.type === 'basic') { const copia = res.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); }
+      return res;
+    });
+    const hit = await caches.match(req, {ignoreSearch: true});
+    if (!hit) return red.catch(() => Response.error());
+    e.waitUntil(red.catch(() => null));
+    return Promise.race([red, new Promise((ok) => setTimeout(() => ok(hit), 4000))]).catch(() => hit);
+  })());
 });
