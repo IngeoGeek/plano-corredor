@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script type="module" src="../lib/model-viewer.min.js"></script>
 <script src="lib/openseadragon.min.js" defer></script>
+<script src="lib/gps-campo.js"></script>
 <style>
 /* Visor de plano y maqueta: escenario grande con selector 2D/3D y controles flotantes; ficha técnica tipo rótulo debajo */
 :root{
@@ -59,6 +60,9 @@ model-viewer.vista{--poster-color:var(--stage)}
   font:600 12px/1 var(--body);padding:5px 8px;border-radius:6px}
 #aviso{margin:0;color:var(--muted);min-height:1.5em}
 #aviso.ok{color:var(--ink)}
+.recorrido{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:-.3rem 0 0;font-size:.95rem;color:var(--muted)}
+.recorrido b{color:#1f4e8c;font-weight:600}
+.yo.vieja{opacity:.55}
 .acciones{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
 .lnk{background:none;border:0;padding:0;color:var(--accent);font:500 15px var(--body);text-decoration:underline;cursor:pointer}
 .lnk:disabled{color:var(--ink);text-decoration:none;cursor:default}
@@ -159,7 +163,13 @@ a{color:var(--accent)}
     <button class="capa" type="button" data-grupo="bocaminas" aria-pressed="true" style="--c:#f2b705"><i></i>Proyectos Piloto FHD-161</button>
   </div>
 
-  <p id="aviso" role="status">Cambia entre el plano 2D y la maqueta 3D con los botones de arriba. Gira con un dedo y acerca con dos.</p>
+  <p id="aviso" role="status" aria-live="polite">Cambia entre el plano 2D y la maqueta 3D con los botones de arriba. Gira con un dedo y acerca con dos.</p>
+
+  <div class="recorrido" id="recorrido" hidden>
+    <span>Recorrido: <b id="rec-largo">0 m</b> · <span id="rec-n">0</span> puntos</span>
+    <button class="lnk" id="rec-gpx" type="button">Descargar GPX</button>
+    <button class="lnk" id="rec-borrar" type="button">Borrar recorrido</button>
+  </div>
 
   <div class="acciones">
     <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
@@ -226,7 +236,7 @@ function iniciar2d(){
     showNavigationControl: false, maxZoomPixelRatio: 2.5, minZoomImageRatio: 0.9, visibilityRatio: 0.9,
     constrainDuringPan: true, immediateRender: false, gestureSettingsTouch: {pinchRotate: false, flickEnabled: true},
     gestureSettingsMouse: {clickToZoom: false, dblClickToZoom: true} });
-  visor2d.addHandler('open', () => { if (posPlano) ponerPin2d(); });
+  visor2d.addHandler('open', () => { if (posPlano) ponerPin2d(); GPSCampo.dibujar2d(visor2d, aPxPlano, IMG.w, IMG.h); });
 }
 function cambiar(v){
   vista = v;
@@ -338,28 +348,53 @@ function distanciaKm(E, N){
   const dx = Math.max(MARCO.E0 - E, 0, E - MARCO.E1), dy = Math.max(MARCO.N0 - N, 0, N - MARCO.N1);
   return Math.hypot(dx, dy) / 1000;
 }
-function alPosicion(p){
+function mmss(s){ s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+let viejaTxt = '';
+function alPosicion(p, info){
+  if (!(info && info.vieja)) viejaTxt = '';
   const [E, N] = aOrigenNacional(p.coords.latitude, p.coords.longitude);
-  const prec = Math.round(p.coords.accuracy || 0);
+  const prec = Math.round(p.coords.accuracy || 0), vieja = info && info.vieja;
   posModelo = enMaqueta(E, N); posPlano = enPlano(E, N);
+  $('#yo').classList.toggle('vieja', !!vieja); $('#yo2d').classList.toggle('vieja', !!vieja);
   if (posModelo){ mv.updateHotspot({name: 'hotspot-yo', position: `${posModelo.x}m ${posModelo.y + 0.002}m ${posModelo.z}m`}); $('#yo').hidden = false; }
   else $('#yo').hidden = true;
   ponerPin2d();
-  if (posPlano) avisar(`Usted está aquí: E ${Math.round(E).toLocaleString('es-CO')} · N ${Math.round(N).toLocaleString('es-CO')} (±${prec} m).`, true);
-  else avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
+  const donde = `E ${Math.round(E).toLocaleString('es-CO')} · N ${Math.round(N).toLocaleString('es-CO')}`;
+  if (vieja){
+    const hace = Math.max(0, Math.round((Date.now() - p.timestamp) / 60000));
+    viejaTxt = `Última posición conocida (${hace < 1 ? 'hace un momento' : `hace ${hace} min`}, ±${prec} m): ${donde}. `;
+    avisar(viejaTxt + 'Buscando satélites para actualizarla…');
+  } else if (!posPlano) avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
+  else if (prec > 100) avisar(`Posición aproximada (±${prec} m): ${donde}. Afinando con los satélites…`);
+  else avisar(`Usted está aquí: ${donde} (±${prec} m).`, true);
   if (window.__pinAR) window.__pinAR();
 }
-function alError(e){
-  avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador.'
-                      : 'Todavía no hay señal de GPS. Si estás bajo techo, acércate a una ventana o sal al aire libre.');
+function alEsperar(s){
+  avisar(viejaTxt + `Buscando satélites… ${mmss(s)}. Sin internet la primera señal tarda más (de 1 a 5 minutos): sal al aire libre y deja el celular quieto unos instantes.`
+    + (s > 150 ? ' Si no llega, revisa que Chrome tenga activada la «ubicación precisa» (Ajustes → Aplicaciones → Chrome → Permisos → Ubicación).' : ''));
 }
+function alPerder(s){ avisar(`Sin señal de satélites hace ${mmss(s)} (bajo techo, árboles densos o un cañón). Se sigue buscando; el recorrido continúa al volver la señal.`); }
+function alError(e){
+  avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador (y activa la «ubicación precisa»).'
+       : e.code === 0 ? 'Este navegador no permite usar la ubicación.' : 'Todavía no hay señal de GPS. Se sigue buscando.');
+  $('#btn-gps').setAttribute('aria-pressed', 'false'); $('#xr-gps').setAttribute('aria-pressed', 'false');
+}
+function aPxPlano(lat, lon){ return enPlano(...aOrigenNacional(lat, lon)); }
+function pintarRecorrido(pts){
+  $('#recorrido').hidden = !pts.length;
+  const m = GPSCampo.longitud(); $('#rec-largo').textContent = m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2).replace('.', ',')} km`;
+  $('#rec-n').textContent = pts.length.toLocaleString('es-CO');
+  GPSCampo.dibujar2d(visor2d, aPxPlano, IMG.w, IMG.h);
+}
+pintarRecorrido(GPSCampo.puntos());
+$('#rec-gpx').addEventListener('click', () => GPSCampo.descargar(document.title));
+$('#rec-borrar').addEventListener('click', () => { if (confirm('¿Borrar el recorrido guardado en este celular?')) GPSCampo.borrar(); });
 async function gps(on){
   $('#btn-gps').setAttribute('aria-pressed', String(on)); $('#xr-gps').setAttribute('aria-pressed', String(on));
-  if (!on){ if (vigilancia !== null) navigator.geolocation.clearWatch(vigilancia); vigilancia = null; posModelo = null; posPlano = null;
-    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada.'); return; }
-  if (!('geolocation' in navigator)){ avisar('Este navegador no permite usar la ubicación.'); return; }
-  avisar('Buscando tu posición con el GPS…'); await altPromesa;
-  vigilancia = navigator.geolocation.watchPosition(alPosicion, alError, {enableHighAccuracy: true, maximumAge: 5000, timeout: 30000});
+  if (!on){ GPSCampo.detener(); posModelo = null; posPlano = null;
+    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada. El recorrido queda guardado en este celular.'); return; }
+  viejaTxt = ''; avisar('Buscando tu posición con el GPS (funciona sin internet)…'); await altPromesa;
+  GPSCampo.iniciar({posicion: alPosicion, esperando: alEsperar, perdida: alPerder, error: alError, recorrido: pintarRecorrido});
 }
 $('#btn-gps').addEventListener('click', () => gps($('#btn-gps').getAttribute('aria-pressed') !== 'true'));
 $('#xr-gps').addEventListener('click', () => gps($('#xr-gps').getAttribute('aria-pressed') !== 'true'));
