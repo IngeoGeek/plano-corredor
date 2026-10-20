@@ -1,6 +1,6 @@
 // Versión 3 (GPS de campo sin internet y recorrido): guarda el visor en el celular. Usa la red cuando hay conexión (siempre la versión más reciente)
 // y la copia guardada cuando no la hay.
-const CACHE = 'plano-corredor-v3-2';
+const CACHE = 'plano-corredor-v3-3';
 const MARCA = 'marca-guardado-completo';
 const BASE = ['./', 'index.html', 'ver.html', '../lib/model-viewer.min.js', 'lib/openseadragon.min.js', 'lib/gps-campo.js',
   'plano_relieve.glb', 'poster_relieve.jpg', 'alturas.json', 'plano2d/plano.dzi', 'logo_invercoal.png', 'etiquetas.json', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png'];
@@ -43,19 +43,11 @@ self.addEventListener('message', (e) => {
   e.waitUntil(guardarTodo().then(() => e.source.postMessage('guardado')).catch(() => e.source.postMessage('error')));
 });
 
-// Primero la red (siempre lo más reciente); si no hay conexión, la copia guardada. Si hay copia y la red tarda
-// más de 4 s (señal débil en campo), se usa la copia y la red la actualiza por detrás para la próxima vez.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin || req.headers.has('range')) return;
-  e.respondWith((async () => {
-    const red = fetch(req).then((res) => {
-      if (res.ok && res.type === 'basic') { const copia = res.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); }
-      return res;
-    });
-    const hit = await caches.match(req, {ignoreSearch: true});
-    if (!hit) return red.catch(() => Response.error());
-    e.waitUntil(red.catch(() => null));
-    return Promise.race([red, new Promise((ok) => setTimeout(() => ok(hit), 4000))]).catch(() => hit);
-  })());
+  e.respondWith(fetch(req).then((res) => {
+    if (res.ok && res.type === 'basic') { const copia = res.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); }
+    return res;
+  }).catch(() => caches.match(req, {ignoreSearch: true}).then((hit) => hit || Response.error())));
 });

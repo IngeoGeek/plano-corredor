@@ -248,7 +248,7 @@ function iniciar2d(){
     showNavigationControl: false, maxZoomPixelRatio: 2.5, minZoomImageRatio: 0.9, visibilityRatio: 0.9,
     constrainDuringPan: true, immediateRender: false, gestureSettingsTouch: {pinchRotate: false, flickEnabled: true},
     gestureSettingsMouse: {clickToZoom: false, dblClickToZoom: true} });
-  visor2d.addHandler('open', () => { PXMM = visor2d.world.getItemAt(0).getContentSize().x / H.ancho_mm; if (ultimoEN) ponerPin2d(); pintarRecorrido(GPSCampo.puntos()); });
+  visor2d.addHandler('open', () => { PXMM = visor2d.world.getItemAt(0).getContentSize().x / H.ancho_mm; if (ultimoEN) ponerPin2d(); try { pintarRecorrido(GPSCampo.puntos()); } catch (e) {} });
   visor2d.addHandler('open-failed', () => avisar(`No se pudo abrir el plano 2D «${A.plano2d}». Revisa el nombre en config.js.`, 'mal'));
 }
 function cambiar(v){
@@ -444,7 +444,7 @@ function pintarRecorrido(pts){
   $('#rec-n').textContent = pts.length.toLocaleString('es-CO');
   if (visor2d && visor2d.world.getItemAt(0)){ const t = visor2d.world.getItemAt(0).getContentSize(); GPSCampo.dibujar2d(visor2d, aPxPlano, t.x, t.y); }
 }
-pintarRecorrido(GPSCampo.puntos());
+try { pintarRecorrido(GPSCampo.puntos()); } catch (e) { /* el GPS nunca debe frenar la maqueta */ }
 $('#rec-gpx').addEventListener('click', () => GPSCampo.descargar(document.title));
 $('#rec-borrar').addEventListener('click', () => { if (confirm('¿Borrar el recorrido guardado en este celular?')) GPSCampo.borrar(); });
 // Prueba sin salir a campo: …/index.html?prueba=6.2105,-73.8133 simula esa posición al tocar el botón de ubicación

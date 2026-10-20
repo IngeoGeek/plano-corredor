@@ -236,7 +236,7 @@ function iniciar2d(){
     showNavigationControl: false, maxZoomPixelRatio: 2.5, minZoomImageRatio: 0.9, visibilityRatio: 0.9,
     constrainDuringPan: true, immediateRender: false, gestureSettingsTouch: {pinchRotate: false, flickEnabled: true},
     gestureSettingsMouse: {clickToZoom: false, dblClickToZoom: true} });
-  visor2d.addHandler('open', () => { if (posPlano) ponerPin2d(); GPSCampo.dibujar2d(visor2d, aPxPlano, IMG.w, IMG.h); });
+  visor2d.addHandler('open', () => { if (posPlano) ponerPin2d(); try { GPSCampo.dibujar2d(visor2d, aPxPlano, IMG.w, IMG.h); } catch (e) {} });
 }
 function cambiar(v){
   vista = v;
@@ -386,7 +386,7 @@ function pintarRecorrido(pts){
   $('#rec-n').textContent = pts.length.toLocaleString('es-CO');
   GPSCampo.dibujar2d(visor2d, aPxPlano, IMG.w, IMG.h);
 }
-pintarRecorrido(GPSCampo.puntos());
+try { pintarRecorrido(GPSCampo.puntos()); } catch (e) { /* el GPS nunca debe frenar la maqueta */ }
 $('#rec-gpx').addEventListener('click', () => GPSCampo.descargar(document.title));
 $('#rec-borrar').addEventListener('click', () => { if (confirm('¿Borrar el recorrido guardado en este celular?')) GPSCampo.borrar(); });
 async function gps(on){
