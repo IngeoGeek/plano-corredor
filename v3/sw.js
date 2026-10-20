@@ -1,6 +1,6 @@
 // Versión 3 (GPS de campo sin internet y recorrido): guarda el visor en el celular. Usa la red cuando hay conexión (siempre la versión más reciente)
 // y la copia guardada cuando no la hay.
-const CACHE = 'plano-corredor-v3-1';
+const CACHE = 'plano-corredor-v3-2';
 const MARCA = 'marca-guardado-completo';
 const BASE = ['./', 'index.html', 'ver.html', '../lib/model-viewer.min.js', 'lib/openseadragon.min.js', 'lib/gps-campo.js',
   'plano_relieve.glb', 'poster_relieve.jpg', 'alturas.json', 'plano2d/plano.dzi', 'logo_invercoal.png', 'etiquetas.json', 'manifest.webmanifest', 'icono-192.png', 'icono-512.png'];

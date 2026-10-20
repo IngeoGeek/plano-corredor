@@ -95,12 +95,14 @@
     if (!capa) {
       capa = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       capa.setAttribute('viewBox', `0 0 ${ancho} ${alto}`); capa.setAttribute('preserveAspectRatio', 'none');
-      capa.style.pointerEvents = 'none'; capa.innerHTML = '<g fill="none" stroke="#d81b60" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></g>';
+      capa.style.pointerEvents = 'none'; capa.innerHTML = '<g fill="none" stroke-linejoin="round" stroke-linecap="round"></g>';
       visor.addOverlay({element: capa, location: new OpenSeadragon.Rect(0, 0, 1, alto / ancho)});
     }
     const g = capa.firstChild; let d = '';
     puntos.forEach((p, i) => { const q = aPx(p[0], p[1]); if (!q) return; d += `${i && !p[4] && d ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`; });
-    g.innerHTML = d ? `<path d="${d}" vector-effect="non-scaling-stroke"/>` : '';
+    // línea discreta: azul oscuro semitransparente con un borde blanco fino, para que no tape el plano
+    g.innerHTML = d ? `<path d="${d}" stroke="#fff" stroke-opacity=".7" stroke-width="4" vector-effect="non-scaling-stroke"/>`
+                    + `<path d="${d}" stroke="#1f4e8c" stroke-opacity=".85" stroke-width="2" vector-effect="non-scaling-stroke"/>` : '';
   }
 
   window.GPSCampo = {iniciar, detener, descargar, borrar, dibujar2d, longitud, puntos: () => puntos, activo: () => activo};
