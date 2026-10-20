@@ -1,0 +1,363 @@
+
+# Guía manual: del plano de QGIS a la maqueta 3D con realidad aumentada, GPS y QR
+·
+
+## Qué vas a construir
+Con QGIS, Blender y una cuenta gratuita de GitHub, cualquier plano se convierte en una página web que se abre escaneando un QR. La página muestra el plano 2D con zoom, una maqueta 3D en relieve y la realidad aumentada a tamaño real, marca la posición GPS y funciona sin internet. Esta guía lo hace a mano, clic por clic, sin scripts, con el plano del Corredor Carbonífero de Santander como ejemplo. Cada valor de la guía es el que se usó en ese ejemplo, para que puedas comparar tus resultados.
+- Resultado del ejemplo: ingeogeek.github.io/plano-corredor/ejemplo-manual
+- Kit de la página web (descarga): kit-manual.zip, 4,6 MB. Es la página ya programada: solo se edita un archivo de texto (config.js).
+[paragraph]
+
+### Programas (todos gratuitos)
+ProgramaPara quéDónde se descargaQGIS 3.34 LTR o más recienteRelieve, texturas, medidas y etiquetasqgis.orgBlender 4.xArmar la maqueta y exportarlablender.orgEditor de texto (Notepad++ o Visual Studio Code)Editar config.jsnotepad-plus-plus.org · code.visualstudio.comGitHub Desktop + cuenta de GitHubPublicar la páginadesktop.github.com · github.comlibvips (opcional)Teselas del plano 2D en alta resolucióngithub.com/libvips/build-win64-mxe/releasesGoogle ChromeGenerar el QRgoogle.com/chrome
+Las capturas de QGIS están en español (QGIS 3.34). Las de Blender están en inglés, que es como viene por defecto; al lado de cada opción va su nombre en español.
+
+### Datos que necesitas
+- Un proyecto de QGIS (.qgz) con el diseño de impresión del plano terminado.
+- Curvas de nivel con un campo de cota en metros, o un DEM (modelo digital de elevación) en metros. Un ráster de sombreado no sirve como relieve, porque guarda tonos de gris, no alturas.
+- El proyecto en un sistema de coordenadas proyectado en metros de tipo Transversa de Mercator: UTM, MAGNA-SIRGAS Origen-Nacional, Gauss-Krüger u otro similar.
+
+### Tiempo y carpetas
+La primera vez toma entre 3 y 5 horas; las siguientes, alrededor de una hora. Antes de empezar crea dos carpetas:
+- C:\Plano3D\trabajo para los archivos intermedios (DEM, imágenes y la escena de Blender).
+- C:\Plano3D\sitio para la página que se publica: allí se descomprime el kit.
+
+### El recorrido completo
+[embed]
+El trabajo de diseño está en QGIS y Blender (recuadros con color). El kit y GitHub solo empaquetan y publican lo que esas dos etapas producen.
+
+## Paso 1 · Preparar el proyecto en QGIS y anotar las medidas
+En este paso no se crea nada: se leen seis grupos de números del proyecto y se anotan, porque todos los pasos siguientes dependen de ellos. Copia la tabla «Hoja de anotaciones» del final del paso y llénala con tus valores.
+
+### 1.1 Revisar que el proyecto esté en metros
+1. Abre el proyecto: Proyecto → Abrir… y elige el .qgz.
+2. Mira la esquina inferior derecha de la ventana (recuadro 1): ahí está el sistema de coordenadas del proyecto. En el ejemplo dice EPSG:9377.
+3. Si dice EPSG:4326 (grados) o un sistema que no sea Transversa de Mercator, haz clic sobre él, busca la zona UTM de tu región o el sistema nacional, selecciónalo y pulsa Aceptar.
+[paragraph]
+
+### 1.2 Copiar los parámetros de la proyección (para el GPS)
+1. Haz clic en el botón EPSG:9377 de la esquina, o ve a Proyecto → Propiedades… → SRC.
+2. Baja con la rueda del ratón en el cuadro de texto inferior izquierdo hasta el renglón Proj4 (recuadro 1).
+3. Copia esa línea. En el ejemplo es: +proj=tmerc +lat_0=4 +lon_0=-73 +k=0.9992 +x_0=5000000 +y_0=2000000 +ellps=GRS80.
+[paragraph]
+Si la línea empieza con +proj=utm +zone=18, los valores son: lat_0 = 0, lon_0 = 6 × zona − 183 (zona 18: −75), k = 0.9996, x_0 = 500000, y_0 = 0 en el hemisferio norte o 10000000 si aparece +south, y elipsoide WGS84.
+
+### 1.3 Leer la escala y la extensión del mapa principal
+1. Abre el diseño: Proyecto → Diseños → el nombre de tu diseño (en el ejemplo, Plano_90x60_Corredor_Carbonifero).
+2. En el panel Elementos, haz clic en el mapa grande (en el ejemplo, Mapa principal).
+3. Abre la pestaña Propiedades del elemento. Anota la Escala (recuadro 1) y los cuatro valores de Extensión (recuadro 2): X mín, Y mín, X máx e Y máx.
+[paragraph]
+
+### 1.4 Leer la posición y el tamaño del mapa en la hoja
+1. En la misma pestaña, baja hasta Posición y tamaño y ábrela con el triángulo.
+2. Revisa que el Punto de referencia sea el de arriba a la izquierda (el primer círculo).
+3. Anota X, Y, Anchura y Altura en milímetros (recuadro 1).
+[paragraph]
+
+### 1.5 Leer el tamaño de la hoja
+1. Haz clic derecho sobre una parte vacía de la hoja y elige Propiedades de página.
+2. Anota Anchura y Altura (recuadros 1 y 2).
+[paragraph]
+
+### Hoja de anotaciones
+DatoDónde se leeEjemploProyección (lat_0, lon_0, k, x_0, y_0, elipsoide)1.2 · línea Proj44 · −73 · 0.9992 · 5000000 · 2000000 · GRS80Escala del mapa1.31:65 000E mín · E máx (X mín · X máx)1.34885966.641 · 4928420.741N mín · N máx (Y mín · Y máx)1.32241436.912 · 2278431.036Posición del mapa x · y (mm)1.420.57 · 15.43Tamaño del mapa ancho · alto (mm)1.4653.14 · 569.14Tamaño de la hoja ancho · alto (mm)1.5900 · 600Cota mínima y máxima redondeadas (m)2.4100 · 2000
+Comprobación: (E máx − E mín) ÷ (ancho del mapa en mm ÷ 1000) debe dar la escala. En el ejemplo, 42 454,1 ÷ 0,65314 = 65 000. Si no da, revisa que copiaste la extensión del mapa correcto.
+
+## Paso 2 · Modelo digital de elevación (DEM)
+El resultado de este paso es dem_suave.tif: alturas en metros, celdas de 30 m y exactamente la extensión del mapa principal. Si ya tienes un DEM, salta a 2.2.
+
+### 2.1 Opción A: interpolar desde curvas de nivel (como en el ejemplo)
+1. Abre la caja de herramientas: Procesos → Caja de herramientas (Ctrl + Alt + T).
+2. En el buscador escribe TIN y haz doble clic en Interpolación TIN.
+3. En Capa Vector elige las curvas de nivel y en Atributo de interpolación el campo de cota (en el ejemplo, elev). Pulsa el botón verde + (recuadro 1).
+4. En la tabla aparece la capa. En la columna Tipo, cambia «Puntos» por Líneas de estructura (recuadro 2). Así el programa respeta el trazo de cada curva y el relieve sale con menos facetas que con «Puntos».
+5. Método de interpolación: Lineal.
+6. Extensión (recuadro 3): escribe la del mapa principal en el orden X mín, X máx, Y mín, Y máx y el sistema entre corchetes. En el ejemplo: 4885966.641,4928420.741,2241436.912,2278431.036 [EPSG:9377]. También puedes usar el botón de la derecha → Calculate from Layout Map (así aparece, en inglés, aun con QGIS en español) → tu diseño → Mapa principal, que escribe la extensión exacta sin teclear.
+7. Tamaño X de píxel y Tamaño Y de píxel: 30 (recuadro 4). No importa lo que muestren Filas y Columnas: el programa las calcula al ejecutar.
+8. En Interpolado, pulsa … → Guardar en archivo y escribe C:\Plano3D\trabajo\dem_tin.tif. Pulsa Ejecutar.
+[paragraph]
+
+### 2.2 Opción B: usar un DEM que ya existe
+Sirven el DEM de Copernicus o ALOS de 30 m, el de una entidad nacional o el modelo de superficie de un vuelo con dron. Desde QGIS se descargan con el complemento OpenTopography DEM Downloader (Complementos → Administrar e instalar complementos), que pide una clave gratuita de opentopography.org. Luego úsalo en 2.3 en lugar de dem_tin.tif: en el primer Combar de 2.3 elige además tu sistema del proyecto en SRC objetivo, para que el DEM quede en metros.
+
+### 2.3 Suavizar el relieve (recomendado)
+El TIN deja triángulos planos que se notan en la maqueta. Se suavizan pasando la capa a 90 m con promedio y regresándola a 30 m con curvas suaves.
+1. Ráster → Proyecciones → Combar (reproyectar)…
+2. Capa de entrada: dem_tin (recuadro 1). Método de remuestreo: Media (recuadro 2). Resolución del archivo de salida: 90 (recuadro 3).
+3. Reproyectada: C:\Plano3D\trabajo\dem90.tif. Ejecutar.
+[paragraph]
+1. Abre otra vez Combar (reproyectar). Capa de entrada: dem90 (recuadro 1). Método de remuestreo: Cubic B-Spline (recuadro 2). Resolución: 30 (recuadro 3).
+2. Abre Advanced Parameters y en Extensión georreferenciada del archivo de salida pon la extensión del mapa principal, igual que en 2.1 (recuadro 4).
+3. Reproyectada: C:\Plano3D\trabajo\dem_suave.tif. Ejecutar.
+[paragraph]
+
+### 2.4 Leer la cota mínima y la máxima
+1. En el panel Capas, debajo de dem_suave, QGIS ya muestra el valor más alto y el más bajo. Para verlos con precisión: doble clic en la capa → Simbología → Gris monobanda, abre Configuración de valores mín/máx, elige Mín / máx y en Precisión Real (más lento).
+2. Lee Mín y Máx (recuadros 1 y 2). En el ejemplo: 103,78 m y 1 983,76 m.
+3. Redondea hacia afuera a números cómodos y anótalos en la hoja de anotaciones: z mín = 100 y z máx = 2000.
+[paragraph]
+
+## Paso 3 · Exportar las imágenes del plano
+Se exportan tres imágenes desde el diseño: la hoja completa en dos tamaños y el mapa solo, que será la piel del relieve. Para las texturas de la maqueta no pases de unos 4 100 píxeles por lado, porque muchos celulares no cargan imágenes más grandes dentro de un modelo 3D.
+La resolución en ppp se calcula así: ppp = píxeles que quieres ÷ (ancho en mm ÷ 25,4).
+ImagenQué contieneResoluciónResultado en el ejemploplano_hoja.jpgHoja completa: base de la maqueta116 ppp4 110 × 2 740 pxplano_hoja_hd.jpgHoja completa: plano 2D con zoom254 ppp9 000 × 6 000 pxplano_mapa.jpgSolo el mapa principal: piel del relieve160 ppp4 114 × 3 585 px
+
+### 3.1 La hoja completa (dos veces)
+1. En la ventana del diseño pulsa Exportar como imagen (recuadro 1), el ícono de la hoja con una imagen. También está en Diseño → Exportar como imagen…
+2. Elige la carpeta C:\Plano3D\trabajo, escribe plano_hoja.jpg y pulsa Guardar.
+3. En Opciones de exportación de imagen, escribe la Resolución de exportación (recuadro 1). Revisa la Anchura de página que calcula QGIS (recuadro 2). Deja apagado Recortar al contenido y pulsa Save.
+4. Repite con el nombre plano_hoja_hd.jpg y 254 ppp.
+[paragraph]
+[paragraph]
+
+### 3.2 Solo el mapa principal
+La imagen del relieve debe cubrir exactamente la extensión del mapa, sin la cuadrícula de coordenadas ni el marco, que quedan por fuera. Por eso se hace en una copia del diseño.
+1. Proyecto → Administrador de diseños…, selecciona tu diseño, pulsa Duplicar y nómbralo Textura. Se abre la copia.
+2. En el panel Elementos, selecciona todos los elementos menos el mapa principal (Ctrl + clic para elegir varios) y pulsa la tecla Supr.
+3. Selecciona el mapa principal. En Propiedades del elemento → Cuadrículas (recuadro 1), elige la cuadrícula de la lista y quítala con el botón rojo − (recuadro 2). Desmarca Marco (recuadro 3).
+[paragraph]
+1. Abre la pestaña Diseño. En Ajustar tamaño de la composición al contenido (recuadro 1) deja los cuatro márgenes en 0 y pulsa Ajustar tamaño de la composición (recuadro 2). La hoja queda del tamaño exacto del mapa: 653,14 × 569,14 mm en el ejemplo.
+[paragraph]
+1. Exportar como imagen → plano_mapa.jpg → 160 ppp (4 096 ÷ (653,14 ÷ 25,4) = 159,3, redondeado a 160). Comprueba que salga de unos 4 114 × 3 585 px.
+
+## Paso 4 · Mapa de alturas y números para Blender
+Blender levanta el relieve leyendo una imagen en escala de grises: negro es la cota mínima y blanco la máxima. Esa imagen debe ser de 16 bits; con 8 bits solo hay 256 tonos y el relieve sale en escalones. La misma imagen la usa la página para poner el GPS a la altura correcta sobre la maqueta.
+
+### 4.1 Convertir el DEM en relieve.png
+1. Ráster → Conversión → Traducir (convertir formato)…
+2. Capa de entrada: dem_suave (recuadro 1).
+3. Abre Advanced Parameters. En Parámetros adicionales de línea de órdenes escribe -scale 100 2000 0 65535 con tus z mín y z máx (recuadro 2). En Tipo de datos de salida elige UInt16 (recuadro 3).
+4. Convertido: C:\Plano3D\trabajo\relieve.png (con la extensión .png). Ejecutar.
+5. Copia relieve.png también a C:\Plano3D\sitio.
+[paragraph]
+Abajo, en Llamada a la consola de GDAL/OGR, debe aparecer gdal_translate -ot UInt16 -of PNG -scale 100 2000 0 65535 …. En el ejemplo la imagen sale de 1 415 × 1 233 píxeles.
+
+### 4.2 Calcular las medidas de la maqueta
+La maqueta se arma en metros del objeto físico: la hoja mide 0,9 × 0,6 m, igual que el plano impreso. Con la hoja de anotaciones:
+QuéFórmulaEjemploEscala (E)(E máx − E mín) ÷ (ancho del mapa mm ÷ 1000)42 454,1 ÷ 0,65314 = 65 000Exageración vertical (VE)Se elige: 2 a 32,5Fuerza del relieve (m)(z máx − z mín) × VE ÷ E1 900 × 2,5 ÷ 65 000 = 0,07308 mPosición X del relieve (mm)x + ancho ÷ 2 − ancho de hoja ÷ 220,57 + 326,57 − 450 = −102,86Posición Y del relieve (mm)alto de hoja ÷ 2 − (y + alto ÷ 2)300 − (15,43 + 284,57) = 0,00Posición Z del relieve (mm)Fija0,5
+Con una exageración de 1 el relieve se ve casi plano a estas escalas. Con más de 3, los nombres del mapa se estiran en las laderas y se vuelven difíciles de leer. El relieve queda 0,5 mm por encima de la hoja para que las dos superficies no parpadeen donde se tocan.
+
+## Paso 5 · Construir la maqueta en Blender
+La maqueta tiene dos piezas: una hoja plana con la imagen de todo el plano y, encima, un relieve con la imagen del mapa, del tamaño y en la posición exacta del mapa principal. El norte va hacia el eje Y verde de Blender y la altura hacia el eje Z azul.
+Antes de empezar. Abre Blender y pulsa General. Borra el cubo: clic sobre él, tecla X → Delete. Para leer las medidas en milímetros: pestaña Scene (Escena) del panel derecho → Units → Length: Millimeters. Las teclas de esta guía se pulsan con el puntero sobre la vista 3D.
+
+### 5.1 La hoja
+1. Add → Mesh → Plane (Añadir → Malla → Plano).
+2. Pulsa N para abrir el panel lateral, pestaña Item. En Dimensions escribe X 900 mm e Y 600 mm (recuadro 1). Luego Ctrl + A → Scale (Aplicar → Escala).
+3. En el panel derecho abre la pestaña Material (esfera roja) y pulsa New. Nómbralo Hoja (recuadro 2).
+4. En Base Color haz clic en el punto amarillo → Image Texture → Open → plano_hoja.jpg (recuadro 3).
+5. Roughness: 1 (recuadro 4). Abre Specular y pon IOR Level en 0 (en Blender 3.x, Specular en 0). Así el plano no brilla.
+6. Pulsa + al lado de la lista de materiales, luego New, y nómbralo Canto, con un gris claro en Base Color.
+7. Pestaña Modifiers (llave azul) → Add Modifier → Generate → Solidify: Thickness 4 mm, Offset -1 y en Materials → Rim 1. La hoja queda con 4 mm de grosor y el canto gris.
+[paragraph]
+Así queda el material visto en el editor de nodos: la imagen (recuadro 1) conectada a Base Color y Roughness en 1 (recuadro 2).
+[paragraph]
+
+### 5.2 La rejilla del relieve
+1. Add → Mesh → Grid (Rejilla). Abre el panel Add Grid que aparece abajo a la izquierda (o pulsa F9) y escribe X Subdivisions 600, Y Subdivisions 522, Size 1 m. Las subdivisiones guardan la proporción del mapa: 600 ÷ (653,14 ÷ 569,14) = 523.
+2. En el panel N: Location X -102.86 mm, Y 0 mm, Z 0.5 mm (recuadro 1), y Dimensions X 653.14 mm, Y 569.14 mm (recuadro 2). Luego Ctrl + A → Scale.
+3. Crea su material Mapa igual que en 5.1, con la imagen plano_mapa.jpg, Roughness 1 y Specular 0. Agrega un segundo material Pared gris oscuro.
+[paragraph]
+
+### 5.3 Levantar el relieve
+1. Con el relieve seleccionado: Modifiers → Add Modifier → Deform → Displace (Desplazar).
+2. En Texture pulsa New (recuadro 1). Coordinates: UV (recuadro 2). Direction: Z (recuadro 3). Strength: 0.07308 y Midlevel: 0 (recuadro 4).
+3. Abre la pestaña Texture (cuadro de ajedrez, abajo del todo). Type: Image or Movie (recuadro 1). Pulsa Open y elige relieve.png (recuadro 2). Color Space: Non-Color (recuadro 3). Más abajo, en Mapping, cambia Extension a Extend para que no salgan picos en los bordes.
+4. Add Modifier → Generate → Decimate: Collapse con Ratio 0.5 (recuadro 5). Deja la maqueta en unas 313 000 caras, que un celular mueve con fluidez.
+5. Aplica los dos modificadores en orden: en el menú ∨ de Displace → Apply, y luego el de Decimate.
+[paragraph]
+[paragraph]
+
+### 5.4 Las paredes del bloque
+1. Pulsa Tab (modo edición) y 1 (selección de vértices). Alt + A para no dejar nada seleccionado.
+2. Select → Select All by Trait → Non Manifold: queda seleccionado solo el borde del relieve (línea naranja).
+3. Pulsa E, luego Z, mueve un poco hacia abajo y haz clic. Escribe S, Z, 0 y Enter para dejar el borde nuevo plano. En el panel N, botón Global, pon Median Z en 0 mm: las paredes bajan justo hasta la hoja.
+4. Pulsa Ctrl + Num + una vez (Select → More) y luego 3 (selección de caras): quedan seleccionadas solo las paredes. En la pestaña Material elige Pared y pulsa Assign.
+5. A para seleccionar todo y Shift + N (Recalculate Outside). Así ninguna pared sale negra en el celular. Pulsa Tab para salir.
+6. Clic derecho → Shade Smooth. En Blender 4.0, pestaña Object Data (triángulo verde) → Normals → Auto Smooth a 30°. En Blender 4.1 o más reciente, clic derecho → Shade Auto Smooth.
+7. Guarda la escena: File → Save As → C:\Plano3D\trabajo\maqueta.blend.
+[paragraph]
+[paragraph]
+
+## Paso 6 · Chinchetas y rótulos
+Hay dos clases de nombres. Los pocos que siempre deben verse, como municipios o títulos mineros, van dentro de la maqueta como chinchetas 3D y también salen en la realidad aumentada. Los grupos largos, como fallas, pliegues u operadores, van como etiquetas de la página que se prenden y apagan por grupo; esos se exportan de QGIS y no se tocan en Blender.
+
+### 6.1 Chinchetas dentro de la maqueta (Blender)
+1. Vista desde arriba: tecla 7 del teclado numérico. Vista con texturas: Z → Material Preview.
+2. Add → Mesh → Cylinder con Radius 0.6 mm y Depth 30 mm: es la aguja. Dale un material blanco.
+3. Add → Mesh → UV Sphere con Radius 4 mm: es la cabeza, con un material rojo. Súbela 32 mm sobre el terreno.
+4. Add → Text. Pulsa Tab, borra «Text», escribe el nombre y pulsa Tab otra vez. En el panel N, Rotation X 90°. En la pestaña Object Data (ícono a): Paragraph → Alignment Center, Geometry → Extrude 0.4 mm, Font → Size 11 mm. Dale un color oscuro y ubícalo 42 mm sobre el terreno.
+5. Con el texto seleccionado: Object → Convert → Mesh. Sin este paso el texto no se exporta.
+6. Para cada lugar, selecciona aguja, cabeza y texto, pulsa Shift + D y muévelos. Cambia el texto antes del paso 5 o crea uno nuevo.
+Cómo apoyar cada pieza en el terreno. Activa el imán (Snap) de la barra superior de la vista 3D y en su menú elige Face Project. Pulsa G y mueve la pieza sobre el lugar: se pega a la superficie del relieve. Haz clic, apaga el imán y súbela con G, Z, el número y Enter: 15 para la aguja, 32 para la cabeza y 42 para el texto (en milímetros).
+[paragraph]
+Para ubicarlas, la imagen del mapa ya muestra dónde va cada lugar. Si quieres la posición exacta en milímetros a partir de las coordenadas E y N del lugar:
+- X (mm) = x + (E − E mín) ÷ (E máx − E mín) × ancho del mapa − ancho de hoja ÷ 2
+- Y (mm) = alto de hoja ÷ 2 − [y + (N máx − N) ÷ (N máx − N mín) × alto del mapa]
+Ejemplo, cabecera de Landázuri (E 4 910 075, N 2 245 618): X = 20,57 + 0,5679 × 653,14 − 450 = −58,53 mm; Y = 300 − (15,43 + 0,8870 × 569,14) = −220,25 mm. Son los valores que muestra la captura.
+
+### 6.2 Etiquetas de la página (QGIS → CSV)
+Cada grupo de etiquetas es un archivo CSV con la posición de cada nombre.
+1. Si la capa es de líneas o polígonos, primero pásala a puntos: Caja de herramientas → Punto en superficie, Capa de entrada la capa (recuadro 1), Ejecutar. Sale una capa temporal «Punto». Si la capa ya es de puntos, salta este paso.
+2. Clic derecho sobre la capa de puntos → Exportar → Guardar objetos como…
+3. Formato: Valores separados por comas [CSV] (recuadro 1). Nombre de archivo: C:\Plano3D\sitio\etiquetas\fallas.csv (recuadro 2). SRC: el del proyecto.
+4. En Opciones de capa, GEOMETRY = AS_XY (recuadro 3). Así el archivo trae las columnas X e Y. Pulsa Aceptar.
+5. Repite con cada grupo. En el ejemplo: fallas.csv, pliegues.csv, operadores.csv y proyectos_piloto.csv.
+[paragraph]
+[paragraph]
+Si una falla está partida en varios tramos con el mismo nombre, la página deja un solo rótulo: el del tramo más central. Anota qué columna tiene el nombre que se muestra (en el ejemplo, nombre o etiqueta); se usa en el Paso 9.
+
+## Paso 7 · Exportar la maqueta para Android (.glb) y para iPhone (.usdz)
+La misma escena se exporta dos veces. El .glb lo usan Android, los computadores y el visor 3D de la página. El .usdz lo usa la realidad aumentada del iPhone.
+
+### 7.1 Archivo .glb
+1. File → Export → glTF 2.0 (.glb/.gltf).
+2. Format: glTF Binary (.glb) (recuadro 1).
+3. Include → Limit to: marca Visible Objects (recuadro 2).
+4. Transform: deja marcado +Y Up (recuadro 3).
+5. Data → Mesh: marca Apply Modifiers (recuadro 4), para que el grosor de la hoja salga en el archivo. Deja UVs y Normals marcados.
+6. Data → Material → Images: JPEG Format, calidad entre 80 y 90. Así el archivo pesa la mitad que con PNG.
+7. Compression: déjala apagada. Draco necesita descargar un decodificador de internet y entonces la maqueta no abriría sin conexión.
+8. Escribe el nombre plano_relieve.glb (recuadro 5), elige la carpeta C:\Plano3D\sitio y pulsa Export glTF 2.0 (recuadro 6).
+[paragraph]
+En el ejemplo el archivo pesa 13,7 MB. Si pasa de unos 25 MB, la página carga lenta en el celular: baja el Ratio de Decimate o el tamaño de las texturas. Para revisarlo antes de publicar, arrástralo a gltf-viewer.donmccurdy.com.
+
+### 7.2 Archivo .usdz
+1. File → Export → Universal Scene Description (.usd)*.
+2. Marca Visible Only, UV Maps, Normals y Materials; dentro de Materials, To USD Preview Surface y Export Textures. Deja Selection Only sin marcar.
+3. Escribe el nombre con la extensión .usdz: plano_relieve.usdz. Con esa extensión Blender empaqueta el modelo y las imágenes en un solo archivo.
+4. Guarda en C:\Plano3D\sitio.
+Esta opción viene en Blender descargado de blender.org, pero no en algunas versiones instaladas desde los repositorios de Linux. Por eso no hay captura de esta ventana: la guía se hizo con un Blender sin exportador USD y el .usdz del ejemplo se generó por otro camino. En un Mac también sirve Reality Converter de Apple: abre el .glb y exporta el .usdz. Si no tienes cómo hacer el .usdz, deja modelo_iphone: '' en el Paso 9: en el iPhone funcionarán el plano 2D, la maqueta 3D y el GPS, y la realidad aumentada usará el motor del navegador.
+
+## Paso 8 · El plano 2D con zoom
+Hay dos formas. La sencilla usa una sola imagen y alcanza para leer el plano en el celular. La de teselas corta la imagen grande en cuadritos, como Google Maps, y permite acercarse hasta leer la letra más pequeña del rótulo.
+
+### 8.1 Opción sencilla: una sola imagen
+1. Exporta otra vez la hoja completa (Paso 3.1) con el nombre plano.jpg y una resolución que no pase de 16 millones de píxeles. Para una hoja de 900 × 600 mm, 138 ppp da 4 890 × 3 260 px. En algunos iPhone, las imágenes más grandes no cargan o se ven borrosas dentro de una página.
+2. Guárdala en C:\Plano3D\sitio. En el Paso 9 escribirás plano2d: 'plano.jpg'.
+
+### 8.2 Opción de teselas (la del ejemplo)
+1. Instala libvips. En Windows, descarga de github.com/libvips/build-win64-mxe/releases el archivo vips-dev-w64-web-….zip y descomprímelo en C:\vips. En Mac: brew install vips. En Linux: sudo apt install libvips-tools.
+2. Abre la carpeta C:\Plano3D\trabajo en el explorador, escribe cmd en la barra de direcciones y pulsa Enter: se abre una terminal en esa carpeta.
+3. Escribe esta línea y pulsa Enter (en Mac y Linux, sin C:\vips\bin\):
+C:\vips\bin\vips.exe dzsave plano_hoja_hd.jpg plano --suffix .jpg[Q=85]
+1. Aparecen plano.dzi y la carpeta plano_files. En el ejemplo son 1 167 archivos y 15 MB.
+2. Crea la carpeta C:\Plano3D\sitio\plano2d y mueve allí plano.dzi y plano_files. En el Paso 9 escribirás plano2d: 'plano2d/plano.dzi'.
+Con teselas, la página tiene más de 100 archivos y hay que publicarla con GitHub Desktop (Paso 10), no subiéndolos por la web.
+
+## Paso 9 · Armar la página con el kit
+La página ya está programada en el kit. Solo se llenan los datos del plano en un archivo de texto, config.js, y se copian los archivos que hiciste.
+
+### 9.1 Copiar los archivos
+1. Descarga kit-manual.zip y descomprímelo dentro de C:\Plano3D\sitio.
+2. Revisa que en sitio queden juntos: index.html, config.js, sw.js, manifest.webmanifest, icono-192.png, icono-512.png, la carpeta lib y tus archivos: plano_relieve.glb, plano_relieve.usdz, relieve.png, plano2d (o plano.jpg), la carpeta etiquetas con los CSV y, si quieres, logo.png.
+3. No cambies los nombres de index.html, config.js, sw.js ni de la carpeta lib.
+
+### 9.2 Llenar config.js
+Abre config.js con Notepad++ o Visual Studio Code, no con Word. Cambia solo lo que está después de los dos puntos. Los números van con punto decimal (2.5, no 2,5), los textos entre comillas simples y no se borra ninguna coma del final de línea. Así queda la parte de medidas en el ejemplo:
+version: 1,
+titulo: 'Corredor Carbonífero de Santander',
+subtitulo: 'Plano general · Cimitarra – Landázuri – Vélez · 1:65 000',
+hoja: { ancho_mm: 900, alto_mm: 600 },
+marco: {
+  x_mm: 20.57, y_mm: 15.43,
+  ancho_mm: 653.14, alto_mm: 569.14,
+  E_min: 4885966.641, E_max: 4928420.741,
+  N_min: 2241436.912, N_max: 2278431.036
+},
+relieve: { imagen: 'relieve.png', z_min: 100, z_max: 2000, exageracion: 2.5 },
+proyeccion: { lat_0: 4, lon_0: -73, k: 0.9992, x_0: 5000000, y_0: 2000000, elipsoide: 'GRS80' },
+archivos: {
+  modelo: 'plano_relieve.glb',
+  modelo_iphone: 'plano_relieve.usdz',
+  plano2d: 'plano2d/plano.dzi',
+  poster: ''
+},
+etiquetas: [
+  { archivo: 'etiquetas/fallas.csv', campo: 'nombre', grupo: 'Fallas', color: '#c62828' },
+  { archivo: 'etiquetas/proyectos_piloto.csv', campo: 'etiqueta', grupo: 'Proyectos Piloto FHD-161', color: '#f2b705' }
+],
+Campo de config.jsDe dónde salehojaPaso 1.5marco x_mm, y_mm, ancho_mm, alto_mmPaso 1.4marco E_min, E_max, N_min, N_maxPaso 1.3 (X mín, X máx, Y mín, Y máx)relieve z_min, z_maxPaso 2.4: los mismos números de -scalerelieve exageracionLa misma de la fórmula de Strength en BlenderproyeccionPaso 1.2, línea Proj4. Elipsoide: GRS80, WGS84 o INTERNACIONALarchivosLos nombres de tus archivos; '' si no tienes .usdz o pósteretiquetasUn renglón por CSV del Paso 6.2; campo es la columna del nombre. Para no usar etiquetas: etiquetas: [],ficha, elaboro, pieTextos libres: ficha técnica, autor y logo
+Para que el ícono instalado en el celular tenga el nombre de tu plano, abre manifest.webmanifest y cambia name y short_name.
+
+### 9.3 Probar en el computador antes de publicar
+Abrir index.html con doble clic no funciona: la página necesita un servidor, aunque sea local.
+1. Abre una terminal en C:\Plano3D\sitio (como en el Paso 8.2).
+2. Escribe python -m http.server 8000 y pulsa Enter. Si no tienes Python, instálalo de python.org o usa la extensión Live Server de Visual Studio Code.
+3. En el navegador entra a http://localhost:8000/. Deben verse la maqueta, el plano 2D y las etiquetas.
+4. Prueba del GPS sin salir a campo: agrega ?prueba=latitud,longitud de un lugar conocido y pulsa el botón de ubicación. En el ejemplo, http://localhost:8000/?prueba=6.22226,-73.81319 pone «Usted está aquí» sobre la cabecera de Landázuri en la maqueta y en el plano 2D. La latitud y longitud de un punto se copian en Google Maps con clic derecho sobre el lugar.
+5. Si el punto cae lejos del lugar, revisa proyeccion y marco. Si aparece un aviso en rojo, dice qué archivo falta o cuál nombre no coincide.
+
+## Paso 10 · Publicar en GitHub Pages
+GitHub Pages publica gratis el contenido de un repositorio como página web con dirección https://USUARIO.github.io/REPOSITORIO/. En la cuenta gratuita el repositorio debe ser público, y entonces cualquiera con el enlace puede ver el plano. Si el plano es confidencial, no lo publiques así.
+
+### 10.1 Crear el repositorio
+1. Crea una cuenta en github.com y confirma el correo.
+2. Arriba a la derecha pulsa + → New repository.
+3. Repository name: un nombre corto sin espacios ni tildes, por ejemplo plano-corredor. Elige Public y pulsa Create repository.
+
+### 10.2 Subir los archivos con GitHub Desktop
+1. Instala GitHub Desktop e inicia sesión con tu cuenta (File → Options → Accounts → Sign in).
+2. File → Clone repository, elige el repositorio y en Local path pon C:\Plano3D\repo. Pulsa Clone.
+3. Copia el contenido de C:\Plano3D\sitio, no la carpeta, dentro de C:\Plano3D\repo. index.html debe quedar en la raíz del repositorio.
+4. En GitHub Desktop aparecen los archivos nuevos. Abajo a la izquierda escribe en Summary Primera versión y pulsa Commit to main.
+5. Pulsa Push origin arriba. La subida tarda según el tamaño: el ejemplo pesa unos 55 MB.
+Sin GitHub Desktop también se puede subir desde la página del repositorio con Add file → Upload files, arrastrando los archivos. Ese camino tiene dos límites: 100 archivos por vez y 25 MB por archivo. Sirve con la opción de una sola imagen del Paso 8.1, no con las teselas.
+
+### 10.3 Encender GitHub Pages
+1. En la página del repositorio: Settings → Pages (menú de la izquierda).
+2. En Build and deployment → Source elige Deploy from a branch.
+3. En Branch elige main y la carpeta / (root). Pulsa Save.
+4. Espera uno o dos minutos y recarga. Arriba aparece la dirección publicada, por ejemplo https://ingeogeek.github.io/plano-corredor/.
+
+### 10.4 Actualizar después
+Cambia los archivos en C:\Plano3D\repo, sube en uno el número de version en config.js y repite Commit to main y Push origin. Subir la versión hace que los celulares que guardaron el plano para usarlo sin internet descarguen la copia nueva. Para no dañar lo que ya funciona, publica los cambios grandes en una carpeta nueva del repositorio (v2/, v3/…) con sus propios QR.
+
+## Paso 11 · QR y pruebas en celulares
+Se hacen dos QR con la misma página. El universal usa la realidad aumentada propia del celular cuando existe: Google en Android con ARCore y Quick Look en iPhone. El de celulares sin ARCore fuerza el motor de realidad aumentada del navegador, que funciona en casi cualquier Android con cámara.
+QRDirecciónUniversalhttps://USUARIO.github.io/REPOSITORIO/Celulares sin ARCorehttps://USUARIO.github.io/REPOSITORIO/?modo=navegador
+
+### 11.1 Generar cada QR con Chrome
+1. Abre la dirección en Chrome, en el computador.
+2. Haz clic derecho sobre la página y elige Crear código QR para esta página. También está en el menú de tres puntos → Transmitir, guardar y compartir → Crear código QR.
+3. Pulsa Descargar: Chrome guarda un PNG.
+4. Pon cada QR en el plano o en una hoja con una línea que diga para qué es. Imprímelo de al menos 2,5 cm de lado y escanéalo desde el papel antes de repartirlo.
+
+### 11.2 Lista de pruebas
+1. Android con ARCore: el QR universal abre la página y Ver en tu espacio pone la maqueta en el piso a tamaño real.
+2. Android sin ARCore: el QR sin ARCore abre la cámara dentro de la página y, al mover el celular despacio, aparece la maqueta.
+3. iPhone: Ver en tu espacio abre Quick Look con la maqueta.
+4. Plano 2D: se acerca con dos dedos hasta leer el rótulo.
+5. Botones de etiquetas: cada grupo se prende y se apaga.
+6. GPS en campo (o con ?prueba=): «Usted está aquí» cae en el sitio correcto del 2D y del 3D.
+7. Sin internet: pulsa Guardar para usar sin internet, espera el «Guardado ✓», activa el modo avión y abre otra vez. En Android conviene Instalar como aplicación y abrir desde el ícono, porque los lectores de QR abren un navegador propio que no conserva lo guardado.
+8. Pantalla completa: entra, gira la maqueta y sale; la página vuelve a su sitio.
+
+## Solución de problemas frecuentes
+Casi todos los problemas vienen de un número mal copiado entre pasos o de un nombre de archivo distinto al de config.js. Esta tabla va del síntoma a la causa.
+Lo que pasaCausa probableSoluciónEl relieve no coincide con el mapa dibujadoLa extensión del DEM o la posición de la rejilla no son las del mapa principalRepite 2.1 y 2.3 con la extensión exacta y revisa Location y Dimensions en 5.2El relieve sale en escalonesMapa de alturas de 8 bitsEn 4.1, Tipo de datos UInt16 y -scale con z mín y z máxPicos o paredes raras en el bordeExtension en RepeatPestaña Texture → Mapping → Extension ExtendRelieve casi plano o exageradoStrength mal calculadoStrength = (z máx − z mín) × VE ÷ escala; en el ejemplo, 0.07308Maqueta gris o blanca, sin imagenLa imagen no está conectada a Base Color, o se exportó sin imágenesRevisa el nodo Image Texture y en el exportador Images = JPEGParedes negrasNormales hacia adentroModo edición, A, Shift + NLos nombres en 3D no salen en el celularEl texto no se convirtió en mallaObject → Convert → Mesh antes de exportarLa página carga muy lento.glb de más de 25 MBBaja el Ratio de Decimate o usa texturas de hasta 4 096 pxSin internet la maqueta no abreCompresión Draco activadaExporta otra vez con Compression apagada«Ver en tu espacio» manda a la Play StoreCelular sin ARCore abierto con el QR universalUsa el QR con ?modo=navegadorEn iPhone no abre la realidad aumentadaFalta el .usdz o su nombre no coincideRevisa modelo_iphone en config.js«Estás fuera del área» estando dentro, o el punto cae corridoParámetros de proyección mal copiados, o E y N invertidos en marcoCompara con la línea Proj4 y prueba con ?prueba=lat,lon de un sitio conocidoNo aparecen las etiquetasCSV sin X e Y, columna campo distinta, o coordenadas en otro sistemaExporta con GEOMETRY = AS_XY y SRC del proyecto; revisa el nombre de la columnaLa página publicada da error 404Pages aún no publica, o index.html no está en la raízEspera dos minutos y revisa la estructura del repositorioAviso «No se pudo guardar: faltan estos archivos»Esos archivos no se subieron o se llaman distintoSúbelos o corrige el nombre en config.jsAl abrir sin internet pide guardar otra vezEl lector de QR abrió un navegador internoAbre desde Chrome o Safari, o instala la página como aplicaciónLos cambios no se ven en el celularCopia guardada viejaSube version en config.js y recargaLa página queda en blancoError de escritura en config.jsRevisa comas, comillas y puntos decimales; la página avisa si no lo puede leer
+
+## Replicarlo en cualquier zona del mundo
+El método no depende de Colombia. Cambian tres cosas: el sistema de coordenadas, la fuente del relieve y las medidas del diseño.
+- Sistema de coordenadas. Usa uno proyectado en metros de tipo Transversa de Mercator. La opción universal es UTM: la zona es la parte entera de (longitud + 180) ÷ 6, más 1. En QGIS se busca como «WGS 84 / UTM zone 18N» (o 18S en el hemisferio sur). El GPS del kit solo calcula Transversa de Mercator; si tu país usa Lambert o Albers, reproyecta el proyecto a UTM antes del Paso 1.
+- Relieve. Donde no haya curvas de nivel, usa un DEM global de 30 m: Copernicus, SRTM, NASADEM o ALOS, todos en el complemento de OpenTopography. En zonas pequeñas, el modelo de superficie de un vuelo con dron da más detalle. Las alturas deben estar en metros.
+- Tamaño de la hoja. Sirve cualquier tamaño. Ajusta las subdivisiones de la rejilla para que el lado largo tenga unas 600 y el corto, la proporción del mapa. Para hojas de más de 1 m, la realidad aumentada muestra la maqueta igual de grande: asegúrate de tener espacio en el piso.
+
+### Lista de verificación final
+1. Hoja de anotaciones llena (Paso 1) y la escala comprobada con la fórmula.
+2. dem_suave.tif con la extensión exacta del mapa y celdas de 30 m.
+3. plano_hoja.jpg, plano_hoja_hd.jpg y plano_mapa.jpg con los tamaños de la tabla del Paso 3.
+4. relieve.png de 16 bits y z mín y z máx anotados.
+5. Maqueta en Blender con hoja, relieve, paredes y chinchetas; escena guardada.
+6. plano_relieve.glb de menos de 25 MB, sin Draco; plano_relieve.usdz si hay iPhone.
+7. Plano 2D en teselas o en una imagen de hasta 16 millones de píxeles.
+8. config.js lleno y probado en localhost con ?prueba=.
+9. Repositorio público con GitHub Pages encendido.
+10. Dos QR impresos y probados en Android con y sin ARCore, en iPhone y sin internet.
+
+### Enlaces de referencia
+- Ejemplo publicado con esta guía y kit de la página
+- Manual de Blender 4.0: exportar USD y USDZ
+- Complemento OpenTopography DEM Downloader para QGIS
+- GitHub Docs: subir archivos desde el navegador y sus límites
+- Cómo crear un QR con Google Chrome
