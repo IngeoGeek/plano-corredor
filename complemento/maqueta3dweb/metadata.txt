@@ -1,0 +1,13 @@
+[general]
+name=Maqueta 3D Web
+qgisMinimumVersion=3.28
+description=Convierte un plano de QGIS guardado en un GeoPackage (diseño + DEM) o un vuelo de fotogrametría en una página web con plano 2D, maqueta 3D en relieve, realidad aumentada a tamaño real, GPS, uso sin internet y QR; la publica en GitHub Pages.
+about=Sin Blender: la maqueta se construye en Python (numpy, pyfqmr, trimesh). La primera vez instala trimesh, pyfqmr y qrcode (y usd-core, opcional, para iPhone).
+version=0.2.0
+author=Osney Izaquita
+email=osney.izaquita@gmail.com
+category=Web
+icon=icono.png
+experimental=True
+tags=3D,web,realidad aumentada,QR,GitHub,fotogrametría,DEM
+changelog=0.2.0: modo fotogrametría (DJI Terra, WebODM, Pix4D, genérico), publicación en GitHub, un solo QR para todos los celulares.
