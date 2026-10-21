@@ -200,6 +200,9 @@ a{color:var(--accent)}
 
 <script>
 const C = self.PLANO;
+// Qué ofrece la página (config.js → funciones). Si falta algo, queda activado como antes.
+const FX = Object.assign({gps: true, recorrido: true, sin_internet: true, instalar: true}, (C && C.funciones) || {});
+if (!FX.gps) FX.recorrido = false;
 const $ = (s) => document.querySelector(s);
 const mv = $('#mv'), stage = $('#stage'), aviso = $('#aviso');
 function avisar(t, tipo){ aviso.textContent = t; aviso.className = tipo || ''; }
@@ -431,7 +434,7 @@ function alEsperar(s){
   avisar(viejaTxt + `Buscando satélites… ${mmss(s)}. Sin internet la primera señal tarda más (de 1 a 5 minutos): sal al aire libre y deja el celular quieto unos instantes.`
     + (s > 150 ? ' Si no llega, revisa que Chrome tenga activada la «ubicación precisa» (Ajustes → Aplicaciones → Chrome → Permisos → Ubicación).' : ''));
 }
-function alPerder(s){ avisar(`Sin señal de satélites hace ${mmss(s)} (bajo techo, árboles densos o un cañón). Se sigue buscando; el recorrido continúa al volver la señal.`); }
+function alPerder(s){ avisar(`Sin señal de satélites hace ${mmss(s)} (bajo techo, árboles densos o un cañón). Se sigue buscando` + (FX.recorrido ? '; el recorrido continúa al volver la señal.' : '.')); }
 function alError(e){
   avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador (y activa la «ubicación precisa»).'
        : e.code === 0 ? 'Este navegador no permite usar la ubicación.' : 'Todavía no hay señal de GPS. Se sigue buscando.');
@@ -439,6 +442,7 @@ function alError(e){
 }
 function aPxPlano(lat, lon){ return enPlano(...aPlanas(lat, lon)); }
 function pintarRecorrido(pts){
+  if (!FX.recorrido){ $('#recorrido').hidden = true; return; }
   $('#recorrido').hidden = !pts.length;
   const m = GPSCampo.longitud(); $('#rec-largo').textContent = m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2).replace('.', ',')} km`;
   $('#rec-n').textContent = pts.length.toLocaleString('es-CO');
@@ -452,12 +456,13 @@ const PRUEBA = (new URLSearchParams(location.search).get('prueba') || '').split(
 async function gps(on){
   $('#btn-gps').setAttribute('aria-pressed', String(on)); $('#xr-gps').setAttribute('aria-pressed', String(on));
   if (!on){ GPSCampo.detener(); posModelo = null; posPlano = null; ultimoEN = null;
-    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada. El recorrido queda guardado en este celular.'); return; }
+    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar(FX.recorrido ? 'Ubicación desactivada. El recorrido queda guardado en este celular.' : 'Ubicación desactivada.'); return; }
   await altPromesa;
   if (PRUEBA.length === 2 && PRUEBA.every(isFinite)) { alPosicion({coords: {latitude: PRUEBA[0], longitude: PRUEBA[1], accuracy: 0}, timestamp: Date.now()}); return; }
   viejaTxt = ''; avisar('Buscando tu posición con el GPS (funciona sin internet)…');
-  GPSCampo.iniciar({posicion: alPosicion, esperando: alEsperar, perdida: alPerder, error: alError, recorrido: pintarRecorrido});
+  GPSCampo.iniciar({posicion: alPosicion, esperando: alEsperar, perdida: alPerder, error: alError, recorrido: pintarRecorrido, guardar: FX.recorrido});
 }
+if (!FX.gps){ $('#btn-gps').hidden = true; $('#xr-gps').hidden = true; }
 $('#btn-gps').addEventListener('click', () => gps($('#btn-gps').getAttribute('aria-pressed') !== 'true'));
 $('#xr-gps').addEventListener('click', () => gps($('#xr-gps').getAttribute('aria-pressed') !== 'true'));
 
@@ -552,7 +557,7 @@ $('#btn-ra').addEventListener('click', () => {
   if (MODO === 'auto' && (ES_IOS || XR_NATIVO) && mv.canActivateAR) { salirDeFull(); mv.activateAR(); return; }
   raNavegador();
 });
-if (ES_IOS && A.modelo_iphone) { $('#dl-usdz').hidden = false;
+if (FX.sin_internet && ES_IOS && A.modelo_iphone) { $('#dl-usdz').hidden = false;
   $('#dl-usdz').title = 'Guárdalo en Archivos y ábrelo desde allí para ponerlo en tu espacio aunque no tengas conexión'; }
 
 /* ---------- Sin internet ---------- */
@@ -564,7 +569,7 @@ function marcarGuardado(fechaIso){
 async function revisarGuardado(){
   try { const r = await caches.match(MARCA); if (r) marcarGuardado(await r.text()); } catch (e) {}
 }
-if ('serviceWorker' in navigator && 'caches' in window && location.protocol !== 'file:'){
+if (FX.sin_internet && 'serviceWorker' in navigator && 'caches' in window && location.protocol !== 'file:'){
   navigator.serviceWorker.register('sw.js').catch(() => {});
   revisarGuardado(); navigator.serviceWorker.ready.then(() => setTimeout(revisarGuardado, 800));
   navigator.serviceWorker.addEventListener('message', (e) => {
@@ -578,7 +583,7 @@ if ('serviceWorker' in navigator && 'caches' in window && location.protocol !== 
   });
 } else { btnOff.hidden = true; }
 let pedidoInstalar = null;
-addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; $('#btn-instalar').hidden = false; });
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); if (!FX.instalar) return; pedidoInstalar = e; $('#btn-instalar').hidden = false; });
 $('#btn-instalar').addEventListener('click', async () => { if (!pedidoInstalar) return; pedidoInstalar.prompt();
   const r = await pedidoInstalar.userChoice; pedidoInstalar = null; $('#btn-instalar').hidden = true;
   if (r.outcome === 'accepted') avisar('Listo: abre el plano desde el ícono de tu pantalla principal, también sin internet.', 'ok'); });

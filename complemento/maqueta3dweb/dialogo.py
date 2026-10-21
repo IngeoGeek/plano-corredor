@@ -233,8 +233,27 @@ class Dialogo(QDialog):
         F.addRow('Carpeta de salida:', self.f_salida); F.addRow('Dirección de la página (para el QR):', self.e_url); F.addRow('Repositorio de GitHub:', self.e_repo)
         L.addLayout(F)
         self.b_conectar = QPushButton('Conectar con GitHub…'); self.b_conectar.clicked.connect(self._conectar_github); L.addWidget(self.b_conectar)
+        # Qué ofrece la página: se recuerda para la próxima vez
+        gf = QGroupBox('Qué ofrece la página (la maqueta 3D, el plano 2D y la realidad aumentada siempre están)'); V = QVBoxLayout(gf)
+        guard = json.loads(QgsSettings().value('maqueta3dweb/funciones', '{}') or '{}')
+        self.k_fx = {}
+        for clave, texto in (('gps', 'Botón «Mi ubicación» (GPS: la persona se ve en el plano y en la maqueta)'),
+                             ('recorrido', 'Guardar el recorrido y descargarlo en GPX'),
+                             ('sin_internet', 'Guardar para usar sin internet'),
+                             ('instalar', 'Instalar como aplicación')):
+            k = QCheckBox(texto); k.setChecked(bool(guard.get(clave, True))); V.addWidget(k); self.k_fx[clave] = k
+        self.k_fx['gps'].toggled.connect(self.k_fx['recorrido'].setEnabled); self.k_fx['recorrido'].setEnabled(self.k_fx['gps'].isChecked())
+        b = QPushButton('Solo mostrar el resultado y ubicar a la persona'); b.setFlat(True); b.setStyleSheet('text-align:left;color:#0b5394;text-decoration:underline')
+        b.clicked.connect(lambda: [self.k_fx[c].setChecked(c == 'gps') for c in self.k_fx]); V.addWidget(b)
+        L.addWidget(gf)
         L.addStretch(1)
         return w
+
+    def funciones(self):
+        f = {c: k.isChecked() for c, k in self.k_fx.items()}
+        if not f['gps']: f['recorrido'] = False
+        QgsSettings().setValue('maqueta3dweb/funciones', json.dumps(f))
+        return f
 
     def _conectar_github(self):
         try:
@@ -261,7 +280,7 @@ class Dialogo(QDialog):
         p = self._perfil_actual()
         comunes = dict(titulo=self.e_titulo.text(), subtitulo=self.e_subtitulo.text(), salida=salida, url=self.e_url.text().strip() if self.r_zip.isChecked() else '',
                        elaboro={'nombre': p['autor'] if p['mostrar_elaboro'] else '', 'titulos': p['titulos']},
-                       pie=p['empresa'], logo=p['logo'] or None, color=p['color'] or None)
+                       pie=p['empresa'], logo=p['logo'] or None, color=p['color'] or None, funciones=self.funciones())
         self.b_gen.setEnabled(False); QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             if self.r_gpkg.isChecked():

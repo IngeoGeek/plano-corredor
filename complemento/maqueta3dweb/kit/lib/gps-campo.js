@@ -44,7 +44,7 @@
   function vigilar() {
     if (vigia !== null) navigator.geolocation.clearWatch(vigia);
     vigia = navigator.geolocation.watchPosition((p) => {
-      ultima = Date.now(); anotar(p); cb.posicion(p, {vieja: false});
+      ultima = Date.now(); if (cb.guardar !== false) anotar(p); cb.posicion(p, {vieja: false});
     }, (e) => {
       if (e.code === 1) { cb.error(e); detener(); return; }
       setTimeout(() => { if (activo) vigilar(); }, 3000);     // sin señal: se vuelve a pedir, nunca se rinde
@@ -63,7 +63,7 @@
       if (!ultima) cb.esperando((Date.now() - t0) / 1000);
       else if (Date.now() - ultima > 25000 && cb.perdida) cb.perdida((Date.now() - ultima) / 1000);
     }, 1000);
-    if (cb.recorrido) cb.recorrido(puntos);
+    if (cb.recorrido && cb.guardar !== false) cb.recorrido(puntos);
   }
   function detener() {
     activo = false; clearInterval(reloj); reloj = null;

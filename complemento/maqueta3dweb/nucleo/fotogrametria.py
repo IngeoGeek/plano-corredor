@@ -305,7 +305,8 @@ def procesar(par, progreso=print):
            'relieve': {'imagen': 'relieve.png', 'z_min': float(z0), 'z_max': float(z1), 'exageracion': 1},
            'proyeccion': proy or {'lat_0': 0, 'lon_0': 0, 'k': 1, 'x_0': 0, 'y_0': 0, 'elipsoide': 'GRS80'},
            'archivos': {'modelo': 'plano_relieve.glb', 'modelo_iphone': usdz, 'plano2d': 'plano.jpg', 'poster': ''},
-           'etiquetas': [], 'ficha': ficha, 'elaboro': par.get('elaboro') or {'nombre': '', 'titulos': []}, 'pie': {'logo': logo, 'texto': par.get('pie', '')}}
+           'etiquetas': [], 'ficha': ficha, 'elaboro': par.get('elaboro') or {'nombre': '', 'titulos': []}, 'pie': {'logo': logo, 'texto': par.get('pie', '')},
+           'funciones': par.get('funciones') or {}}
     sitio.escribir_config(web, cfg)
     z = sitio.comprimir(web, os.path.join(S, 'sitio.zip')); progreso(f'Sitio listo: {web} · {os.path.getsize(z) / 1e6:.1f} MB en sitio.zip')
     if par.get('url'): sitio.qr(par['url'], os.path.join(S, 'QR.png'))

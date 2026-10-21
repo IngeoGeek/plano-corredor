@@ -214,7 +214,8 @@ def procesar(par, progreso=print):
            'archivos': {'modelo': 'plano_relieve.glb', 'modelo_iphone': usdz, 'plano2d': 'plano2d/plano.dzi', 'poster': ''},
            'etiquetas': et_cfg, 'ficha': ficha,
            'elaboro': par.get('elaboro') or {'nombre': '', 'titulos': []},
-           'pie': {'logo': logo, 'texto': par.get('pie', '')}}
+           'pie': {'logo': logo, 'texto': par.get('pie', '')},
+           'funciones': par.get('funciones') or {}}
     sitio.escribir_config(web, cfg)
     z = sitio.comprimir(web, os.path.join(S, 'sitio.zip')); progreso(f'Sitio listo: {web}  ·  {os.path.getsize(z) / 1e6:.1f} MB en sitio.zip')
     if par.get('url'):
