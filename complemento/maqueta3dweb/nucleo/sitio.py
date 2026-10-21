@@ -5,8 +5,9 @@ import os, json, math, shutil, zipfile
 KIT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'kit')
 
 
-def dzi(imagen, carpeta, T=254, O=1):
-    """Teselas Deep Zoom del plano 2D (lo que lee OpenSeadragon en la página)."""
+def dzi(imagen, carpeta, T=1022, O=1):
+    """Teselas Deep Zoom del plano 2D (lo que lee OpenSeadragon en la página). Teselas de 1024 px: pocas (≈100 en vez
+    de miles), para que GitHub las acepte rápido (limita a ~80 archivos nuevos por minuto y 500 por hora)."""
     from PIL import Image
     Image.MAX_IMAGE_PIXELS = None
     im = imagen.convert('RGB'); W, H = im.size; maxL = math.ceil(math.log2(max(W, H))); lvl = im; n = 0

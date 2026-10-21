@@ -20,8 +20,22 @@ def _pedir(metodo, ruta, token, datos=None, crudo=False):
             cuerpo = r.read(); return r.status, (cuerpo if crudo else (json.loads(cuerpo) if cuerpo else {}))
     except urllib.error.HTTPError as e:
         cuerpo = e.read()
-        try: return e.code, json.loads(cuerpo)
-        except Exception: return e.code, {'message': cuerpo[:300]}
+        try: d = json.loads(cuerpo)
+        except Exception: d = {'message': cuerpo[:300]}
+        if isinstance(d, dict):
+            d['_espera'] = e.headers.get('Retry-After') or ''
+            if e.headers.get('X-RateLimit-Remaining') == '0': d['_reinicio'] = e.headers.get('X-RateLimit-Reset') or ''
+        return e.code, d
+    except Exception as e:      # sin red o se cortó la conexión: se reintenta
+        return 0, {'message': str(e)}
+
+
+def _esperar(seg):
+    """Espera sin congelar QGIS."""
+    from qgis.PyQt.QtWidgets import QApplication
+    fin = time.time() + seg
+    while time.time() < fin:
+        QApplication.processEvents(); time.sleep(0.1)
 
 
 def token_guardado():
@@ -89,13 +103,16 @@ def publicar(parent, carpeta, repo, registro=print, privado=False):
         st, info = _pedir('POST', '/user/repos', token, {'name': repo, 'private': privado, 'auto_init': True,
                                                         'description': 'Página con plano 2D, maqueta 3D, RA y QR (Maqueta 3D Web)'})
         if st not in (200, 201): raise RuntimeError('No se pudo crear el repositorio: ' + str(info.get('message')))
-        registro(f'Repositorio creado: {login}/{repo}'); time.sleep(2)
+        registro(f'Repositorio creado: {login}/{repo}'); _esperar(2)
     else:   # ya existe: nunca se pisa lo publicado, va en una carpeta vN nueva
         st, cont = _pedir('GET', f'/repos/{login}/{repo}/contents/', token)
         usados = {c['name'] for c in cont} if isinstance(cont, list) else set()
-        k = 2
-        while f'v{k}' in usados: k += 1
-        prefijo = f'v{k}/'; registro(f'El repositorio ya existe: se publica en la carpeta nueva {prefijo}')
+        if 'index.html' not in usados:
+            registro(f'El repositorio {login}/{repo} ya existe pero aún no tiene página: se publica en él.')
+        else:
+            k = 2
+            while f'v{k}' in usados: k += 1
+            prefijo = f'v{k}/'; registro(f'El repositorio ya tiene una página: no se toca y la nueva va en la carpeta {prefijo}')
     rama = info.get('default_branch', 'main')
     st, ref = _pedir('GET', f'/repos/{login}/{repo}/git/ref/heads/{rama}', token)
     base = ref['object']['sha']; st, com = _pedir('GET', f'/repos/{login}/{repo}/git/commits/{base}', token)
@@ -104,21 +121,50 @@ def publicar(parent, carpeta, repo, registro=print, privado=False):
     for raiz, _, nombres in os.walk(carpeta):
         for a in nombres:
             p = os.path.join(raiz, a); archivos.append((p, prefijo + os.path.relpath(p, carpeta).replace(os.sep, '/')))
-    registro(f'Subiendo {len(archivos)} archivos…'); hechos = [0]
+    if len(archivos) > 480:
+        raise RuntimeError(f'Son {len(archivos)} archivos y GitHub solo acepta unos 500 por hora. Vuelve a generar la página con esta versión '
+                           'del complemento (hace el plano 2D con muchos menos archivos) o usa «Solo carpeta y .zip».')
+    registro(f'Subiendo {len(archivos)} archivos (GitHub acepta unos 70 por minuto: tarda alrededor de {max(1, round(len(archivos) / 70))} min)…')
+    import threading
+    estado = {'hechos': 0, 'pausa_hasta': 0.0, 'aviso': ''}; cerrojo = threading.Lock(); ritmo = [0.0]
+
+    def turno():   # como máximo ~70 archivos por minuto en total
+        with cerrojo:
+            ahora = time.time(); t = max(ahora, ritmo[0], estado['pausa_hasta']); ritmo[0] = t + 60 / 70
+        time.sleep(max(0, t - time.time()))
 
     def blob(par):
         p, ruta = par
         with open(p, 'rb') as f: b64 = base64.b64encode(f.read()).decode()
-        for intento in range(4):
+        for intento in range(12):
+            turno()
             st, r = _pedir('POST', f'/repos/{login}/{repo}/git/blobs', token, {'content': b64, 'encoding': 'base64'})
-            if st == 201: hechos[0] += 1; return {'path': ruta, 'mode': '100644', 'type': 'blob', 'sha': r['sha']}
-            time.sleep(2 + 3 * intento)
+            if st == 201:
+                with cerrojo: estado['hechos'] += 1
+                return {'path': ruta, 'mode': '100644', 'type': 'blob', 'sha': r['sha']}
+            espera = 60
+            if r.get('_espera', '').isdigit(): espera = int(r['_espera']) + 1
+            elif r.get('_reinicio', '').isdigit(): espera = max(5, int(r['_reinicio']) - time.time() + 2)
+            elif st not in (403, 429): espera = 5 + 5 * intento
+            with cerrojo:
+                estado['pausa_hasta'] = max(estado['pausa_hasta'], time.time() + espera)
+                estado['aviso'] = f'GitHub pidió una pausa: se sigue en {int(espera)} s (no cierres la ventana)…' if st in (403, 429) else f'Reintentando ({r.get("message", "")[:80]})…'
         raise RuntimeError(f'No se pudo subir {ruta}: {r.get("message")}')
-    with ThreadPoolExecutor(6) as ex:
-        futuros = [ex.submit(blob, a) for a in archivos]; arbol = []
-        for i, f in enumerate(futuros):
-            arbol.append(f.result())
-            if i % 100 == 0: registro(f'  {hechos[0]} de {len(archivos)}')
+
+    from concurrent.futures import wait
+    from qgis.PyQt.QtWidgets import QApplication
+    with ThreadPoolExecutor(3) as ex:
+        futuros = [ex.submit(blob, a) for a in archivos]; ultimo = 0
+        while True:
+            hechos, pend = wait(futuros, timeout=0.2); QApplication.processEvents()
+            if estado['aviso']: registro('  ' + estado['aviso']); estado['aviso'] = ''
+            if estado['hechos'] - ultimo >= 10 or (not pend and estado['hechos'] != ultimo):
+                ultimo = estado['hechos']; registro(f'  {ultimo} de {len(archivos)}')
+            if not pend: break
+            if any(f.done() and f.exception() for f in hechos):
+                for f in futuros: f.cancel()
+                break
+        arbol = [f.result() for f in futuros]
     st, tree = _pedir('POST', f'/repos/{login}/{repo}/git/trees', token, {'base_tree': com['tree']['sha'], 'tree': arbol})
     if st != 201: raise RuntimeError('No se pudo armar el árbol de archivos: ' + str(tree.get('message')))
     st, c = _pedir('POST', f'/repos/{login}/{repo}/git/commits', token, {'message': 'Publicar maqueta 3D (complemento Maqueta 3D Web de QGIS)', 'tree': tree['sha'], 'parents': [base]})
@@ -139,7 +185,7 @@ def publicar(parent, carpeta, repo, registro=print, privado=False):
             with urllib.request.urlopen(urllib.request.Request(url + 'config.js', headers={'User-Agent': 'Maqueta3DWeb', 'Cache-Control': 'no-cache'}), timeout=20) as r:
                 if r.status == 200: lista = True; break
         except Exception: pass
-        time.sleep(5)
+        _esperar(5)
     if not lista: registro('Aviso: la página aún no responde; GitHub puede tardar unos minutos más. El QR ya sirve con esta dirección.')
     from . import sitio
     salida = os.path.dirname(carpeta.rstrip('/\\'))
