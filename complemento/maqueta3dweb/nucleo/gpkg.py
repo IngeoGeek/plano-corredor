@@ -9,14 +9,62 @@ from qgis.PyQt.QtGui import QImage, QPainter, QColor
 from . import malla, sitio
 
 
-def proyectos_en(gpkg):
+def _usa_gpkg(proyecto, gpkg):
+    """¿El archivo .qgz/.qgs carga capas de ese GeoPackage?"""
+    import zipfile
+    try:
+        if proyecto.lower().endswith('.qgz'):
+            with zipfile.ZipFile(proyecto) as z:
+                texto = b''.join(z.read(n) for n in z.namelist() if n.lower().endswith('.qgs')).decode('utf-8', 'ignore')
+        else:
+            texto = open(proyecto, encoding='utf-8', errors='ignore').read()
+    except Exception:
+        return False
+    return os.path.basename(gpkg).lower() in texto.lower()
+
+
+def proyectos_en(ruta):
+    """Proyectos disponibles: los guardados dentro del GeoPackage y, además, los .qgz/.qgs de la misma carpeta
+    que usan ese GeoPackage (por ejemplo, el editable que deja el complemento «Póster de relieve»).
+    También se puede elegir directamente un .qgz o .qgs."""
+    if ruta.lower().endswith(('.qgz', '.qgs')):
+        return [os.path.basename(ruta)]
     st = QgsApplication.projectStorageRegistry().projectStorageFromType('geopackage')
-    return st.listProjects(gpkg) if st else []
+    dentro = list(st.listProjects(ruta)) if st else []
+    carpeta = os.path.dirname(ruta); base = os.path.splitext(os.path.basename(ruta))[0].lower()
+    junto = [f for f in sorted(os.listdir(carpeta)) if f.lower().endswith(('.qgz', '.qgs'))]
+    junto = sorted([f for f in junto if os.path.splitext(f)[0].lower() == base or _usa_gpkg(os.path.join(carpeta, f), ruta)],
+                   key=lambda f: os.path.splitext(f)[0].lower() != base)
+    return dentro + junto
 
 
-def abrir(gpkg, nombre):
+def rasters_en_gpkg(ruta):
+    """Rásteres de una banda guardados dentro del GeoPackage: [(nombre, uri GDAL, tipo de dato)]."""
+    if not ruta.lower().endswith('.gpkg'): return []
+    from osgeo import gdal
+    out = []
+    try:
+        ds = gdal.Open(ruta)
+        if ds is None: return []
+        subs = ds.GetSubDatasets()
+        cand = [(u, u.rsplit(':', 1)[-1]) for u, _ in subs] if subs else ([(ruta, os.path.splitext(os.path.basename(ruta))[0])] if ds.RasterCount else [])
+        for uri, nombre in cand:
+            r = ds if uri == ruta else gdal.Open(uri)
+            if r is not None and r.RasterCount == 1:
+                out.append((nombre, uri, gdal.GetDataTypeName(r.GetRasterBand(1).DataType)))
+    except Exception:
+        pass
+    return out
+
+
+def abrir(ruta, nombre):
     p = QgsProject()
-    if not p.read(f'geopackage:{gpkg}?projectName={nombre}'):
+    if nombre.lower().endswith(('.qgz', '.qgs')):
+        archivo = ruta if ruta.lower().endswith(('.qgz', '.qgs')) else os.path.join(os.path.dirname(ruta), nombre)
+        if not p.read(archivo):
+            raise RuntimeError(f'No se pudo abrir el proyecto «{nombre}».')
+        return p
+    if not p.read(f'geopackage:{ruta}?projectName={nombre}'):
         raise RuntimeError(f'No se pudo abrir el proyecto «{nombre}» del GeoPackage.')
     return p
 

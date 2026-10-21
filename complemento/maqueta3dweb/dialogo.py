@@ -54,13 +54,13 @@ class Dialogo(QDialog):
         self.r_gpkg.toggled.connect(lambda on: self.pila.setCurrentIndex(0 if on else 1))
         # GeoPackage
         pg = QWidget(); F = QFormLayout(pg)
-        self.f_gpkg = QgsFileWidget(); self.f_gpkg.setFilter('GeoPackage (*.gpkg)'); self.f_gpkg.fileChanged.connect(self._gpkg_cambio)
+        self.f_gpkg = QgsFileWidget(); self.f_gpkg.setFilter('GeoPackage o proyecto de QGIS (*.gpkg *.qgz *.qgs)'); self.f_gpkg.fileChanged.connect(self._gpkg_cambio)
         self.c_proy = QComboBox(); self.c_proy.currentTextChanged.connect(self._proy_cambio)
         self.c_dis = QComboBox(); self.c_dis.currentTextChanged.connect(self._dis_cambio)
         self.c_mapa = QComboBox(); self.c_dem = QComboBox(); self.f_dem = QgsFileWidget(); self.f_dem.setFilter('Ráster (*.tif *.tiff *.vrt *.img *.asc)')
         self.f_dem.setEnabled(False); self.c_dem.currentIndexChanged.connect(lambda i: self.f_dem.setEnabled(self.c_dem.currentData() == '__archivo__'))
         self.s_ve = QDoubleSpinBox(); self.s_ve.setRange(1, 10); self.s_ve.setSingleStep(0.5); self.s_ve.setValue(2.5)
-        F.addRow('GeoPackage con el proyecto:', self.f_gpkg); F.addRow('Proyecto guardado:', self.c_proy)
+        F.addRow('GeoPackage o proyecto (.qgz):', self.f_gpkg); F.addRow('Proyecto guardado:', self.c_proy)
         F.addRow('Diseño de impresión:', self.c_dis); F.addRow('Mapa principal:', self.c_mapa)
         F.addRow('Modelo de elevación (DEM):', self.c_dem); F.addRow('   …o archivo aparte:', self.f_dem)
         F.addRow('Exageración vertical:', self.s_ve)
@@ -83,7 +83,7 @@ class Dialogo(QDialog):
         self.c_proy.clear()
         if ruta and os.path.exists(ruta):
             ps = G.proyectos_en(ruta)
-            if not ps: QMessageBox.warning(self, 'Sin proyecto', 'Ese GeoPackage no tiene ningún proyecto de QGIS guardado.\nEn QGIS: Proyecto → Guardar en → GeoPackage.')
+            if not ps: QMessageBox.warning(self, 'Sin proyecto', 'No encontré un proyecto de QGIS para ese GeoPackage: ni guardado dentro de él ni un .qgz/.qgs en la misma carpeta que lo use.\nElige el .qgz directamente, o en QGIS: Proyecto → Guardar en → GeoPackage.')
             self.c_proy.addItems(ps)
 
     def _proy_cambio(self, nombre):
@@ -95,10 +95,27 @@ class Dialogo(QDialog):
         self.c_dis.addItems(G.disenos(self.proyecto))
         for l in G.capas(self.proyecto, 'raster'):
             if l.bandCount() == 1: self.c_dem.addItem(l.name(), l.id())
+        usados = {l.source().split('|')[0].lower() for l in G.capas(self.proyecto, 'raster')}
+        for nombre, uri, tipo in G.rasters_en_gpkg(self.f_gpkg.filePath()):   # DEM guardado en el GeoPackage aunque no esté en el mapa
+            if uri.lower() not in usados: self.c_dem.addItem(f'{nombre} (dentro del GeoPackage)', '__gpkg__' + uri + '|' + tipo)
         self.c_dem.addItem('Archivo aparte…', '__archivo__')
-        for i, nm in enumerate(['dem', 'elev', 'mde', 'mdt', 'dsm']):
-            k = next((j for j in range(self.c_dem.count()) if nm in self.c_dem.itemText(j).lower()), -1)
-            if k >= 0: self.c_dem.setCurrentIndex(k); break
+        # El DEM se elige solo: nombre de elevación y datos de cotas (no un sombreado de 0 a 255)
+        from qgis.core import Qgis
+
+        def puntaje(j):
+            dato = self.c_dem.itemData(j)
+            if dato == '__archivo__': return -1
+            n = self.c_dem.itemText(j).lower(); p = 0
+            if any(k in n for k in ('dem', 'elev', 'mde', 'mdt', 'dsm', 'srtm', 'alos', 'cota', 'altur')): p += 5
+            if any(k in n for k in ('sombr', 'hillshade', 'pendiente', 'slope', 'aspect', 'textura', 'brillo', 'gris')): p -= 10
+            if dato.startswith('__gpkg__'):
+                if dato.rsplit('|', 1)[1] != 'Byte': p += 3
+            else:
+                try:
+                    if self.proyecto.mapLayer(dato).dataProvider().dataType(1) not in (Qgis.DataType.Byte, Qgis.DataType.UnknownDataType): p += 3
+                except Exception: pass
+            return p
+        if self.c_dem.count() > 1: self.c_dem.setCurrentIndex(max(range(self.c_dem.count()), key=puntaje))
         capas = sorted(G.capas(self.proyecto, 'vector'), key=lambda l: l.name().lower())
         self.t_capas.setRowCount(len(capas))
         for r, l in enumerate(capas):
@@ -250,7 +267,9 @@ class Dialogo(QDialog):
             if self.r_gpkg.isChecked():
                 from .nucleo import gpkg as G
                 if not self.proyecto: raise RuntimeError('Elige el GeoPackage y el proyecto (pestaña 1).')
-                dem = self.f_dem.filePath() if self.c_dem.currentData() == '__archivo__' else self.proyecto.mapLayer(self.c_dem.currentData())
+                cd = self.c_dem.currentData()
+                dem = self.f_dem.filePath() if cd == '__archivo__' else cd[8:].rsplit('|', 1)[0] if cd.startswith('__gpkg__') else self.proyecto.mapLayer(cd)
+                if not dem: raise RuntimeError('Elige el modelo de elevación (DEM) en la pestaña 1.')
                 et, ch = [], []
                 colores = ['#c62828', '#6a1b9a', '#e65100', '#2e7d32', '#00838f', '#f2b705']
                 for r in range(self.t_capas.rowCount()):
