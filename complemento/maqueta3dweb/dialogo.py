@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Ventana del complemento Maqueta 3D Web."""
-import os, json, traceback
-from qgis.core import QgsSettings, QgsRasterLayer, Qgis
-from qgis.gui import QgsFileWidget, QgsColorButton
+import os, json, traceback, datetime, unicodedata
+from qgis.core import QgsSettings, QgsRasterLayer, QgsProject, QgsMapLayerProxyModel, Qgis
+from qgis.gui import QgsFileWidget, QgsColorButton, QgsProjectionSelectionWidget, QgsMapLayerComboBox
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QTabWidget, QWidget, QRadioButton, QButtonGroup,
                                  QStackedWidget, QComboBox, QDoubleSpinBox, QLineEdit, QTableWidget, QTableWidgetItem, QPushButton,
-                                 QLabel, QPlainTextEdit, QCheckBox, QMessageBox, QHeaderView, QApplication, QInputDialog, QGroupBox)
+                                 QLabel, QPlainTextEdit, QCheckBox, QMessageBox, QHeaderView, QApplication, QInputDialog, QGroupBox,
+                                 QScrollArea, QFileDialog)
 
 CLAVE = 'maqueta3dweb/perfiles'
 PERFIL_INICIAL = {
@@ -19,6 +20,8 @@ PERFIL_INICIAL = {
                 ['Candidato a Magíster en Recursos Digitales Aplicados a la Educación', 'Universidad de Cartagena'],
                 ['Piloto de drones', '']]}
 USOS = ['—', 'Etiqueta en la página', 'Chincheta 3D (azul)', 'Chincheta 3D (negra)']
+CM = dict(usar=0, capa=1, elem=2, tipo=3, color=4, ancho=5, alto=6, cota=7)          # columnas de la tabla de capas
+CG = dict(ver=0, nombre=1, E=2, N=3, Z=4, ch4=5, fecha=6, u=7, Q=8)                    # columnas de la tabla de frentes
 
 
 def perfiles():
@@ -30,14 +33,30 @@ def perfiles():
 def guardar_perfiles(lista): QgsSettings().setValue(CLAVE, json.dumps(lista, ensure_ascii=False))
 
 
+def _num(t):
+    """'1,25' / '1.25' / '' → float o None."""
+    t = (t or '').strip().replace('%', '').replace(',', '.')
+    try: return float(t) if t else None
+    except ValueError: return None
+
+
+def _llave(t):
+    return ''.join(c for c in unicodedata.normalize('NFD', t or '') if unicodedata.category(c) != 'Mn').upper().strip()
+
+
+def _filtro_raster():
+    try: return Qgis.LayerFilter.RasterLayer
+    except AttributeError: return QgsMapLayerProxyModel.RasterLayer
+
+
 class Dialogo(QDialog):
     def __init__(self, iface, parent=None):
-        super().__init__(parent); self.iface = iface; self.proyecto = None
-        self.setWindowTitle('Maqueta 3D Web · plano o vuelo a página con RA y QR'); self.resize(860, 760)
+        super().__init__(parent); self.iface = iface; self.proyecto = None; self.datos_cad = None; self.mina_prev = None
+        self.setWindowTitle('Maqueta 3D Web · plano, vuelo o mina a página con RA y QR'); self.resize(980, 820)
         L = QVBoxLayout(self); tabs = QTabWidget(); L.addWidget(tabs)
         tabs.addTab(self._tab_insumo(), '1 · Insumo'); tabs.addTab(self._tab_autor(), '2 · Autor y empresa')
         tabs.addTab(self._tab_plano(), '3 · Textos del plano'); tabs.addTab(self._tab_publicar(), '4 · Publicar')
-        self.log = QPlainTextEdit(); self.log.setReadOnly(True); self.log.setMaximumHeight(170); L.addWidget(self.log)
+        self.log = QPlainTextEdit(); self.log.setReadOnly(True); self.log.setMaximumHeight(160); L.addWidget(self.log)
         fila = QHBoxLayout(); fila.addStretch(1)
         self.b_gen = QPushButton('Generar'); self.b_gen.setDefault(True); self.b_gen.clicked.connect(self.generar)
         b_cer = QPushButton('Cerrar'); b_cer.clicked.connect(self.close); fila.addWidget(self.b_gen); fila.addWidget(b_cer); L.addLayout(fila)
@@ -47,11 +66,12 @@ class Dialogo(QDialog):
     def _tab_insumo(self):
         w = QWidget(); L = QVBoxLayout(w)
         fila = QHBoxLayout(); fila.addWidget(QLabel('<b>Tipo de insumo:</b>'))
-        self.r_gpkg = QRadioButton('GeoPackage (plano de QGIS + DEM)'); self.r_foto = QRadioButton('Fotogrametría (carpeta del vuelo procesado)')
-        self.r_gpkg.setChecked(True); g = QButtonGroup(w); g.addButton(self.r_gpkg); g.addButton(self.r_foto)
-        fila.addWidget(self.r_gpkg); fila.addWidget(self.r_foto); fila.addStretch(1); L.addLayout(fila)
+        self.r_gpkg = QRadioButton('Plano de QGIS (GeoPackage + DEM)'); self.r_foto = QRadioButton('Vuelo con dron (fotogrametría)')
+        self.r_mina = QRadioButton('Mina subterránea (plano DWG o DXF)')
+        self.r_gpkg.setChecked(True); g = QButtonGroup(w)
+        for r in (self.r_gpkg, self.r_foto, self.r_mina): g.addButton(r); fila.addWidget(r); r.toggled.connect(self._insumo_cambio)
+        fila.addStretch(1); L.addLayout(fila)
         self.pila = QStackedWidget(); L.addWidget(self.pila)
-        self.r_gpkg.toggled.connect(lambda on: self.pila.setCurrentIndex(0 if on else 1))
         # GeoPackage
         pg = QWidget(); F = QFormLayout(pg)
         self.f_gpkg = QgsFileWidget(); self.f_gpkg.setFilter('GeoPackage o proyecto de QGIS (*.gpkg *.qgz *.qgs)'); self.f_gpkg.fileChanged.connect(self._gpkg_cambio)
@@ -76,7 +96,250 @@ class Dialogo(QDialog):
         self.l_resumen.setWordWrap(True)
         F2.addRow('Carpeta del vuelo:', self.f_carpeta); F2.addRow(self.l_resumen)
         self.pila.addWidget(pf)
+        # Mina subterránea
+        sc = QScrollArea(); sc.setWidgetResizable(True); sc.setWidget(self._pagina_mina()); self.pila.addWidget(sc)
         return w
+
+    def _insumo_cambio(self, *_):
+        self.pila.setCurrentIndex(0 if self.r_gpkg.isChecked() else 1 if self.r_foto.isChecked() else 2)
+
+    def _pagina_mina(self):
+        from .nucleo import cad
+        w = QWidget(); V = QVBoxLayout(w)
+        fila = QHBoxLayout(); fila.addWidget(QLabel('Plano de labores (DWG o DXF):'))
+        self.f_cad = QgsFileWidget(); self.f_cad.setFilter('Plano de labores (*.dwg *.dxf *.DWG *.DXF)'); fila.addWidget(self.f_cad, 1)
+        self.b_leer = QPushButton('Leer el plano'); self.b_leer.clicked.connect(self._leer_cad); fila.addWidget(self.b_leer); V.addLayout(fila)
+        self.l_cad = QLabel('Cada capa del plano es un tipo de labor (nivel, inclinado, cruzada, tambor…) y sus líneas son los ejes que levanta el '
+                            'topógrafo. Los textos de cota sirven cuando los ejes están en 2D.')
+        self.l_cad.setWordWrap(True); V.addWidget(self.l_cad)
+        self.t_mina = QTableWidget(0, 8)
+        self.t_mina.setHorizontalHeaderLabels(['Usar', 'Capa del plano', 'Contenido', 'Tipo de labor', 'Color', 'Ancho (m)', 'Alto (m)', 'Cota fija (m)'])
+        h = self.t_mina.horizontalHeader(); h.setSectionResizeMode(QHeaderView.Interactive); h.setSectionResizeMode(CM['capa'], QHeaderView.Stretch)
+        for c, a in ((CM['usar'], 46), (CM['elem'], 130), (CM['tipo'], 170), (CM['color'], 70), (CM['ancho'], 80), (CM['alto'], 80), (CM['cota'], 95)):
+            self.t_mina.setColumnWidth(c, a)
+        self.t_mina.verticalHeader().setVisible(False); self.t_mina.setMinimumHeight(220); V.addWidget(self.t_mina)
+        fila = QHBoxLayout(); fila.addWidget(QLabel('Colores:'))
+        self.c_colores = QComboBox(); self.c_colores.addItems(['Los del plano (como los dibujó el topógrafo)',
+                                                              'Convención de la empresa (nivel y patio en amarillo, inclinado en gris…)'])
+        self.c_colores.currentIndexChanged.connect(lambda *_: self._aplicar_colores()); fila.addWidget(self.c_colores, 1); V.addLayout(fila)
+        nota = QLabel('La Resolución 40600 de 2015 recomienda diferenciar con colores los niveles de explotación (numeral 2.6, literal m), '
+                      'pero no asigna un color a cada tipo de labor; por eso se puede usar el color del plano o la convención de la empresa.')
+        nota.setWordWrap(True); nota.setStyleSheet('color:#56626b'); V.addWidget(nota)
+        F = QFormLayout()
+        self.c_eje = QComboBox(); self.c_eje.addItems(['En el piso de la labor', 'En el centro de la labor', 'En el techo de la labor'])
+        self.w_crs = QgsProjectionSelectionWidget(); self.w_crs.setCrs(QgsProject.instance().crs())
+        F.addRow('El eje levantado va:', self.c_eje); F.addRow('Sistema de coordenadas del plano:', self.w_crs)
+        self.c_sup = QComboBox(); self.c_sup.addItems(['Sin superficie', 'Modelo de elevación (DEM), con ortofoto si hay', 'Vuelo con dron (carpeta procesada)'])
+        self.c_dem_m = QgsMapLayerComboBox(); self.c_dem_m.setFilters(_filtro_raster()); self.c_dem_m.setAllowEmptyLayer(True)
+        self.f_dem_m = QgsFileWidget(); self.f_dem_m.setFilter('Ráster (*.tif *.tiff *.vrt *.img *.asc)')
+        self.c_orto_m = QgsMapLayerComboBox(); self.c_orto_m.setFilters(_filtro_raster()); self.c_orto_m.setAllowEmptyLayer(True)
+        self.f_vuelo_m = QgsFileWidget(); self.f_vuelo_m.setStorageMode(QgsFileWidget.GetDirectory)
+        F.addRow('Superficie del terreno:', self.c_sup); F.addRow('   DEM (capa):', self.c_dem_m); F.addRow('   …o DEM en archivo:', self.f_dem_m)
+        F.addRow('   Ortofoto (opcional):', self.c_orto_m); F.addRow('   Carpeta del vuelo:', self.f_vuelo_m)
+        self.c_sup.currentIndexChanged.connect(self._sup_cambio); self._sup_cambio(0)
+        V.addLayout(F)
+        gg = QGroupBox('Frentes de trabajo y metano medido (opcional)'); VG = QVBoxLayout(gg)
+        self.t_gas = QTableWidget(0, 9)
+        self.t_gas.setHorizontalHeaderLabels(['Mostrar', 'Frente', 'Este (m)', 'Norte (m)', 'Cota (m)', 'CH₄ (%)', 'Fecha', 'Velocidad del aire (m/s)', 'Caudal (m³/s)'])
+        hg = self.t_gas.horizontalHeader(); hg.setSectionResizeMode(QHeaderView.Interactive); hg.setSectionResizeMode(CG['nombre'], QHeaderView.Stretch)
+        for c, a in ((CG['ver'], 60), (CG['E'], 95), (CG['N'], 95), (CG['Z'], 70), (CG['ch4'], 70), (CG['fecha'], 90), (CG['u'], 150), (CG['Q'], 100)):
+            self.t_gas.setColumnWidth(c, a)
+        self.t_gas.verticalHeader().setVisible(False); self.t_gas.setMinimumHeight(170); VG.addWidget(self.t_gas)
+        fb = QHBoxLayout()
+        b1 = QPushButton('Volver a detectar frentes'); b1.clicked.connect(self._detectar_frentes); fb.addWidget(b1)
+        b2 = QPushButton('Importar mediciones (CSV)…'); b2.clicked.connect(self._importar_csv); fb.addWidget(b2); fb.addStretch(1); VG.addLayout(fb)
+        FG = QFormLayout()
+        self.c_retorno = QComboBox()
+        self.s_E = QDoubleSpinBox(); self.s_E.setRange(0.5, 150); self.s_E.setDecimals(1); self.s_E.setValue(2.0); self.s_E.setSuffix(' m²/s')
+        self.s_u = QDoubleSpinBox(); self.s_u.setRange(0.05, 6); self.s_u.setDecimals(2); self.s_u.setSingleStep(0.05); self.s_u.setValue(0.3); self.s_u.setSuffix(' m/s')
+        self.s_Qr = QDoubleSpinBox(); self.s_Qr.setRange(0, 500); self.s_Qr.setDecimals(2); self.s_Qr.setSpecialValueText('no medido'); self.s_Qr.setSuffix(' m³/s')
+        FG.addRow('Bocamina por donde sale el aire:', self.c_retorno); FG.addRow('Caudal total de retorno:', self.s_Qr)
+        FG.addRow('Velocidad del aire donde no se midió:', self.s_u); FG.addRow('Coeficiente de dispersión E:', self.s_E)
+        VG.addLayout(FG)
+        aviso = QLabel('Modelo ilustrativo para socializar el riesgo: el aire de cada frente se lleva por el camino más corto hasta la bocamina de '
+                       'salida y, sin caudales medidos, sin diluirse (caso desfavorable). E ≈ 2 m²/s corresponde a galerías rectas (fórmula de '
+                       'Taylor); en redes con curvas y fondos ciegos se han medido valores mayores. No reemplaza la medición con el detector ni '
+                       'el estudio de ventilación.')
+        aviso.setWordWrap(True); aviso.setStyleSheet('color:#7a1f1f'); VG.addWidget(aviso)
+        V.addWidget(gg)
+        self.k_carta = QCheckBox('Hacer también el plano tamaño carta con el QR (PDF), para llevar impreso a la visita'); self.k_carta.setChecked(True)
+        V.addWidget(self.k_carta)
+        return w
+
+    def _sup_cambio(self, i):
+        for wdg in (self.c_dem_m, self.f_dem_m, self.c_orto_m): wdg.setEnabled(i == 1)
+        self.f_vuelo_m.setEnabled(i == 2)
+
+    # ----- lectura del DWG/DXF -----
+    def _asegurar_ezdxf(self):
+        from .nucleo import dependencias as D
+        falt = D.faltantes(mina=True)
+        if not falt: return True
+        if QMessageBox.question(self, 'Librerías', 'Para leer planos DWG o DXF hay que instalar: ' + ', '.join(falt) + '.\n¿Instalarlas ahora? (necesita internet)') != QMessageBox.Yes:
+            return False
+        return D.instalar(falt, self.escribir) and not D.faltantes(mina=True)
+
+    def _leer_cad(self):
+        ruta = self.f_cad.filePath()
+        if not ruta or not os.path.exists(ruta): QMessageBox.warning(self, 'Falta', 'Elige el plano de labores (.dwg o .dxf).'); return
+        if not self._asegurar_ezdxf(): return
+        from .nucleo import cad, mina
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            self.datos_cad = mina.analizar(ruta, self.escribir)
+        except cad.FaltaConversor:
+            QApplication.restoreOverrideCursor(); self.datos_cad = None
+            if os.name == 'nt':
+                r = QMessageBox.question(self, 'Abrir un DWG', 'En este equipo no hay con qué abrir el DWG (ni ODA File Converter ni LibreDWG).\n\n'
+                                         '¿Descargar LibreDWG (programa libre, licencia GPL-3, unos 13 MB) desde su página oficial en GitHub, '
+                                         'dentro de la carpeta del complemento?\n\nSi prefiere no hacerlo, guarde el plano como DXF desde AutoCAD o Civil 3D.')
+                if r == QMessageBox.Yes:
+                    try:
+                        QApplication.setOverrideCursor(Qt.WaitCursor); cad.descargar_libredwg(self.escribir)
+                        self.datos_cad = mina.analizar(ruta, self.escribir)
+                    except Exception as e:
+                        QApplication.restoreOverrideCursor(); QMessageBox.warning(self, 'DWG', f'No se pudo convertir el DWG: {e}\n\nGuárdelo como DXF desde AutoCAD o Civil 3D.'); return
+            else:
+                QMessageBox.warning(self, 'Abrir un DWG', 'No encontré con qué abrir el DWG. Instale ODA File Converter o LibreDWG (dwg2dxf), '
+                                                          'o guarde el plano como DXF desde AutoCAD o Civil 3D.')
+                return
+        except Exception as e:
+            QApplication.restoreOverrideCursor(); self.escribir(traceback.format_exc()); QMessageBox.critical(self, 'Plano', str(e)); return
+        finally:
+            while QApplication.overrideCursor(): QApplication.restoreOverrideCursor()
+        if not self.datos_cad: return
+        self._llenar_tabla_mina(); self._aplicar_colores()
+        D = self.datos_cad
+        self.l_cad.setText(f"<b>{os.path.basename(ruta)}</b>: {len(D['lineas'])} líneas, {len(D['textos'])} textos y {len(D['capas'])} capas · "
+                           + ('ejes con cota (3D).' if D['es_3d'] else 'ejes en 2D: la cota sale de los textos de cota o de la cota fija de la capa.')
+                           + ' Revise el tipo de cada capa; las que no son labores (curvas de nivel, rótulo, cuadrícula) van sin marcar.')
+        if not self.e_titulo.text(): self.e_titulo.setText(os.path.splitext(os.path.basename(ruta))[0].replace('_', ' '))
+        self._detectar_frentes()
+
+    def _llenar_tabla_mina(self):
+        from .nucleo import cad
+        filas = self.datos_cad['tabla']; self.t_mina.setRowCount(len(filas))
+        for r, f in enumerate(filas):
+            it = QTableWidgetItem(); it.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled); it.setCheckState(Qt.Checked if f['usar'] else Qt.Unchecked)
+            self.t_mina.setItem(r, CM['usar'], it)
+            it = QTableWidgetItem(f['nombre']); it.setFlags(it.flags() & ~Qt.ItemIsEditable); it.setData(Qt.UserRole, f['color'])
+            if not f['visible']: it.setToolTip('Capa apagada o congelada en el plano')
+            self.t_mina.setItem(r, CM['capa'], it)
+            partes = [f"{f['lineas']} líneas" if f['lineas'] else '', f"{f['textos']} textos" if f['textos'] else '', f"{f['puntos']} bloques" if f['puntos'] else '']
+            it = QTableWidgetItem(' · '.join(p for p in partes if p) or '—'); it.setFlags(it.flags() & ~Qt.ItemIsEditable); self.t_mina.setItem(r, CM['elem'], it)
+            ct = QComboBox()
+            for k in cad.TIPOS: ct.addItem(cad.NOMBRES[k], k)
+            ct.setCurrentIndex(cad.TIPOS.index(f['tipo'])); ct.currentIndexChanged.connect(lambda _i, fila=r: self._tipo_cambio(fila))
+            self.t_mina.setCellWidget(r, CM['tipo'], ct)
+            bc = QgsColorButton(); bc.setColor(QColor(f['color'])); self.t_mina.setCellWidget(r, CM['color'], bc)
+            for col, val in ((CM['ancho'], f['ancho']), (CM['alto'], f['alto'])):
+                s = QDoubleSpinBox(); s.setRange(0.3, 15); s.setDecimals(1); s.setSingleStep(0.1); s.setValue(val); self.t_mina.setCellWidget(r, col, s)
+            e = QLineEdit(); e.setPlaceholderText('—'); e.setToolTip('Solo si toda la capa está a una misma cota y sus ejes no la traen'); self.t_mina.setCellWidget(r, CM['cota'], e)
+
+    def _tipo_cambio(self, r):
+        from .nucleo import cad
+        tipo = self.t_mina.cellWidget(r, CM['tipo']).currentData()
+        an, al = cad.SECCION.get(tipo, (2.0, 1.8))
+        self.t_mina.cellWidget(r, CM['ancho']).setValue(an); self.t_mina.cellWidget(r, CM['alto']).setValue(al)
+        self.t_mina.item(r, CM['usar']).setCheckState(Qt.Unchecked if tipo in ('ignorar', 'otra') else Qt.Checked)
+        if self.c_colores.currentIndex() == 1: self._aplicar_colores()
+
+    def _aplicar_colores(self):
+        from .nucleo import cad
+        for r in range(self.t_mina.rowCount()):
+            tipo = self.t_mina.cellWidget(r, CM['tipo']).currentData()
+            col = cad.CONVENCION.get(tipo) if self.c_colores.currentIndex() == 1 else None
+            self.t_mina.cellWidget(r, CM['color']).setColor(QColor(col or self.t_mina.item(r, CM['capa']).data(Qt.UserRole)))
+
+    def _tabla_mina(self):
+        out = []
+        for r in range(self.t_mina.rowCount()):
+            out.append({'nombre': self.t_mina.item(r, CM['capa']).text(), 'usar': self.t_mina.item(r, CM['usar']).checkState() == Qt.Checked,
+                        'tipo': self.t_mina.cellWidget(r, CM['tipo']).currentData(), 'color': self.t_mina.cellWidget(r, CM['color']).color().name(),
+                        'ancho': self.t_mina.cellWidget(r, CM['ancho']).value(), 'alto': self.t_mina.cellWidget(r, CM['alto']).value(),
+                        'cota': _num(self.t_mina.cellWidget(r, CM['cota']).text())})
+        return out
+
+    def _eje(self): return ('piso', 'centro', 'techo')[self.c_eje.currentIndex()]
+
+    def _detectar_frentes(self):
+        if not self.datos_cad: return
+        from .nucleo import mina
+        previo = self._frentes_cfg()
+        try:
+            M = mina.preparar(self.datos_cad, self._tabla_mina(), {'eje': self._eje()}, self.escribir)
+        except Exception as e:
+            self.escribir(f'No se pudieron detectar los frentes: {e}'); return
+        self.mina_prev = M
+        hoy = datetime.date.today().strftime('%d/%m/%Y')
+        self.t_gas.setRowCount(len(M['frentes']))
+        for r, f in enumerate(M['frentes']):
+            p = min(previo, key=lambda x: (x['E'] - f['E']) ** 2 + (x['N'] - f['N']) ** 2, default=None)
+            if p and ((p['E'] - f['E']) ** 2 + (p['N'] - f['N']) ** 2) ** 0.5 > 5: p = None
+            it = QTableWidgetItem(); it.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            it.setCheckState(Qt.Unchecked if p and p.get('mostrar') is False else Qt.Checked); self.t_gas.setItem(r, CG['ver'], it)
+            self.t_gas.setItem(r, CG['nombre'], QTableWidgetItem(p['nombre'] if p and p.get('nombre') else f['nombre']))
+            for col, v in ((CG['E'], f['E']), (CG['N'], f['N']), (CG['Z'], f['Z'])):
+                it = QTableWidgetItem(f'{v:,.1f}'.replace(',', ' ')); it.setData(Qt.UserRole, v); it.setFlags(it.flags() & ~Qt.ItemIsEditable)
+                it.setTextAlignment(int(Qt.AlignRight | Qt.AlignVCenter)); self.t_gas.setItem(r, col, it)
+            for col, k, defecto in ((CG['ch4'], 'ch4', ''), (CG['fecha'], 'fecha', hoy), (CG['u'], 'u', ''), (CG['Q'], 'Q', '')):
+                v = p.get(k) if p else None
+                self.t_gas.setItem(r, col, QTableWidgetItem('' if v in (None, '') else str(v).replace('.', ',') if k != 'fecha' else str(v)) if v not in (None, '') else QTableWidgetItem(defecto))
+        actual = self.c_retorno.currentText(); self.c_retorno.clear()
+        for b in M['bocaminas']: self.c_retorno.addItem(b['nombre'], (b['E'], b['N']))
+        j = self.c_retorno.findText(actual)
+        if j >= 0: self.c_retorno.setCurrentIndex(j)
+        else:   # por defecto, la bocamina cuyo nombre sugiere ventilación o retorno
+            for i in range(self.c_retorno.count()):
+                if any(k in _llave(self.c_retorno.itemText(i)) for k in ('VENTIL', 'RETORNO', 'SALIDA', 'CHIMENEA')): self.c_retorno.setCurrentIndex(i); break
+        self.escribir(f"Frentes listos para anotar el metano: {len(M['frentes'])}.")
+
+    def _frentes_cfg(self):
+        out = []
+        for r in range(self.t_gas.rowCount()):
+            g = lambda c: self.t_gas.item(r, c).text() if self.t_gas.item(r, c) else ''
+            out.append({'E': self.t_gas.item(r, CG['E']).data(Qt.UserRole), 'N': self.t_gas.item(r, CG['N']).data(Qt.UserRole),
+                        'mostrar': self.t_gas.item(r, CG['ver']).checkState() == Qt.Checked, 'nombre': g(CG['nombre']).strip(),
+                        'ch4': _num(g(CG['ch4'])), 'fecha': g(CG['fecha']).strip() if _num(g(CG['ch4'])) is not None else '',
+                        'u': _num(g(CG['u'])), 'Q': _num(g(CG['Q']))})
+        return out
+
+    def _importar_csv(self):
+        """CSV con columnas frente (nombre como en la tabla, o F1, F2…), ch4, fecha, velocidad y caudal; separado por ; o ,"""
+        import csv
+        ruta, _ = QFileDialog.getOpenFileName(self, 'Mediciones de metano', '', 'CSV (*.csv *.txt)')
+        if not ruta: return
+        texto = open(ruta, encoding='utf-8-sig', errors='replace').read()
+        try: dialecto = csv.Sniffer().sniff(texto.splitlines()[0], delimiters=';,\t')
+        except Exception: dialecto = csv.excel
+        filas = list(csv.DictReader(texto.splitlines(), dialect=dialecto))
+        if not filas: return
+        cab = {_llave(k): k for k in filas[0].keys() if k}
+        busca = lambda *ops: next((cab[k] for k in cab if any(o in k for o in ops)), None)
+        cf, cc, cd, cu, cq = busca('FRENTE', 'NOMBRE', 'ID'), busca('CH4', 'METANO'), busca('FECHA'), busca('VELOC', 'U'), busca('CAUDAL', 'Q')
+        if not cf or not cc: QMessageBox.warning(self, 'CSV', 'El CSV necesita al menos las columnas «frente» y «ch4».'); return
+        nombres = {_llave(self.t_gas.item(r, CG['nombre']).text()): r for r in range(self.t_gas.rowCount())}
+        n = 0
+        for f in filas:
+            k = _llave(f.get(cf, '')); r = nombres.get(k)
+            if r is None and k.startswith('F') and k[1:].isdigit() and int(k[1:]) <= self.t_gas.rowCount(): r = int(k[1:]) - 1
+            if r is None: continue
+            for col, c in ((CG['ch4'], cc), (CG['fecha'], cd), (CG['u'], cu), (CG['Q'], cq)):
+                if c and (f.get(c) or '').strip(): self.t_gas.setItem(r, col, QTableWidgetItem(f[c].strip()))
+            n += 1
+        self.escribir(f'Mediciones importadas: {n} de {len(filas)} filas del CSV.')
+
+    def _superficie(self):
+        i = self.c_sup.currentIndex()
+        if i == 1:
+            dem = self.f_dem_m.filePath() or (self.c_dem_m.currentLayer().source() if self.c_dem_m.currentLayer() else None)
+            if not dem: raise RuntimeError('Elige el modelo de elevación (DEM) de la superficie, o marca «Sin superficie».')
+            orto = self.c_orto_m.currentLayer().source() if self.c_orto_m.currentLayer() else None
+            return {'dem': dem, 'orto': orto}
+        if i == 2:
+            if not self.f_vuelo_m.filePath(): raise RuntimeError('Elige la carpeta del vuelo procesado, o marca «Sin superficie».')
+            return {'carpeta': self.f_vuelo_m.filePath()}
+        return None
 
     def _gpkg_cambio(self, ruta):
         from .nucleo import gpkg as G
@@ -99,10 +362,8 @@ class Dialogo(QDialog):
         for nombre, uri, tipo in G.rasters_en_gpkg(self.f_gpkg.filePath()):   # DEM guardado en el GeoPackage aunque no esté en el mapa
             if uri.lower() not in usados: self.c_dem.addItem(f'{nombre} (dentro del GeoPackage)', '__gpkg__' + uri + '|' + tipo)
         self.c_dem.addItem('Archivo aparte…', '__archivo__')
-        # El DEM se elige solo: nombre de elevación y datos de cotas (no un sombreado de 0 a 255)
-        from qgis.core import Qgis
 
-        def puntaje(j):
+        def puntaje(j):   # el DEM se elige solo: nombre de elevación y datos de cotas (no un sombreado de 0 a 255)
             dato = self.c_dem.itemData(j)
             if dato == '__archivo__': return -1
             n = self.c_dem.itemText(j).lower(); p = 0
@@ -218,7 +479,8 @@ class Dialogo(QDialog):
         w = QWidget(); F = QFormLayout(w)
         self.e_titulo = QLineEdit(); self.e_subtitulo = QLineEdit()
         F.addRow('Título de la página:', self.e_titulo); F.addRow('Subtítulo:', self.e_subtitulo)
-        F.addRow(QLabel('La ficha técnica (escala, exageración, sistema, tamaño; en fotogrametría fotos, RTK y GSD)\nse llena sola con los valores calculados. Se puede editar después en config.js.'))
+        F.addRow(QLabel('La ficha técnica (escala, exageración, sistema, tamaño; en fotogrametría fotos, RTK y GSD; en una mina, cotas,\n'
+                        'superficie y plano fuente) se llena sola con los valores calculados. Se puede editar después en config.js.'))
         return w
 
     # ---------------- 4. Publicar ----------------
@@ -233,7 +495,6 @@ class Dialogo(QDialog):
         F.addRow('Carpeta de salida:', self.f_salida); F.addRow('Dirección de la página (para el QR):', self.e_url); F.addRow('Repositorio de GitHub:', self.e_repo)
         L.addLayout(F)
         self.b_conectar = QPushButton('Conectar con GitHub…'); self.b_conectar.clicked.connect(self._conectar_github); L.addWidget(self.b_conectar)
-        # Qué ofrece la página: se recuerda para la próxima vez
         gf = QGroupBox('Qué ofrece la página (la maqueta 3D, el plano 2D y la realidad aumentada siempre están)'); V = QVBoxLayout(gf)
         guard = json.loads(QgsSettings().value('maqueta3dweb/funciones', '{}') or '{}')
         self.k_fx = {}
@@ -269,14 +530,21 @@ class Dialogo(QDialog):
 
     def generar(self):
         from .nucleo import dependencias as D
-        falt = D.faltantes()
+        es_mina = self.r_mina.isChecked()
+        falt = D.faltantes(mina=es_mina)
         if falt:
             if QMessageBox.question(self, 'Librerías', 'La primera vez hay que instalar: ' + ', '.join(falt) + '.\n¿Instalarlas ahora? (necesita internet)') != QMessageBox.Yes: return
-            if not D.instalar(falt, self.escribir) or D.faltantes():
+            if not D.instalar(falt, self.escribir) or D.faltantes(mina=es_mina):
                 QMessageBox.critical(self, 'Librerías', 'No se pudieron instalar. Revisa el registro de abajo.'); return
             if D.faltantes(True): D.instalar(['usd-core'], self.escribir)   # opcional, para iPhone
         salida = self.f_salida.filePath()
         if not salida: QMessageBox.warning(self, 'Falta', 'Elige la carpeta de salida (pestaña 4).'); return
+        if es_mina and self.r_gh.isChecked():
+            r = QMessageBox.warning(self, 'Plano de una mina en internet',
+                                    'GitHub Pages deja la página a la vista de cualquiera que tenga el enlace o la encuentre.\n\n'
+                                    '¿La empresa autorizó publicar el plano de esta mina? Si no, use «Solo carpeta y .zip» y alójela en un '
+                                    'servidor propio o en la red interna.', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if r != QMessageBox.Yes: return
         p = self._perfil_actual()
         comunes = dict(titulo=self.e_titulo.text(), subtitulo=self.e_subtitulo.text(), salida=salida, url=self.e_url.text().strip() if self.r_zip.isChecked() else '',
                        elaboro={'nombre': p['autor'] if p['mostrar_elaboro'] else '', 'titulos': p['titulos']},
@@ -299,9 +567,19 @@ class Dialogo(QDialog):
                     else: ch.append((capa, campo, 0 if uso == 2 else 1))
                 res = G.procesar(dict(comunes, gpkg=self.f_gpkg.filePath(), proyecto=self.c_proy.currentText(), diseno=self.c_dis.currentText(),
                                       mapa=self.c_mapa.currentText(), dem=dem, ve=self.s_ve.value(), etiquetas_pagina=et, chinchetas=ch), self.escribir)
-            else:
+            elif self.r_foto.isChecked():
                 from .nucleo import fotogrametria as FG
                 res = FG.procesar(dict(comunes, carpeta=self.f_carpeta.filePath()), self.escribir)
+            else:
+                from .nucleo import mina as MN
+                if not self.datos_cad: raise RuntimeError('Lee primero el plano de labores (pestaña 1, botón «Leer el plano»).')
+                crs = self.w_crs.crs(); ok = crs.isValid()
+                res = MN.procesar(dict(comunes, plano=self.f_cad.filePath(), datos=self.datos_cad, tabla=self._tabla_mina(), eje=self._eje(),
+                                       crs_wkt=crs.toWkt() if ok else None, crs_nombre=crs.userFriendlyIdentifier() if ok else '',
+                                       proyeccion=crs if ok else None, superficie=self._superficie(), frentes_cfg=self._frentes_cfg(),
+                                       metano={'E': self.s_E.value(), 'u': self.s_u.value(), 'retorno': self.c_retorno.currentData(),
+                                               'Q_retorno': self.s_Qr.value() or None},
+                                       plano_carta=self.k_carta.isChecked()), self.escribir)
             if self.r_gh.isChecked():
                 from .nucleo import github as GH
                 url = GH.publicar(self, res['sitio'], self.e_repo.text().strip(), self.escribir)

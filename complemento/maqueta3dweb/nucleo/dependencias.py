@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Instala la primera vez las librerías que QGIS no trae (trimesh, pyfqmr, qrcode; usd-core es opcional)."""
+"""Instala la primera vez las librerías que QGIS no trae (trimesh, pyfqmr, qrcode; ezdxf para planos DWG/DXF; usd-core es opcional)."""
 import importlib, os, subprocess, sys
 
 NECESARIAS = {'trimesh': 'trimesh', 'pyfqmr': 'pyfqmr', 'qrcode': 'qrcode'}
 OPCIONALES = {'pxr': 'usd-core'}
+MINA = {'ezdxf': 'ezdxf', 'scipy': 'scipy', 'matplotlib': 'matplotlib'}   # para el modo de mina subterránea (DWG/DXF)
 
 
-def faltantes(opcionales=False):
-    lista = dict(NECESARIAS, **(OPCIONALES if opcionales else {}))
+def faltantes(opcionales=False, mina=False):
+    lista = dict(NECESARIAS, **(OPCIONALES if opcionales else {}), **(MINA if mina else {}))
     out = []
     for mod, pkg in lista.items():
         try: importlib.import_module(mod)
