@@ -944,13 +944,15 @@ def plano_carta(M, ext, sup, res_ch4, capas_cfg, cfg, ruta, url=None, C=None):
     for sp in ax.spines.values(): sp.set_color('#1c252b')
     _dibujar_planta(ax, M, ext, sup, res_ch4, grosor=1.8, escala_texto=0.9, C=C)
     _norte_y_escala(ax, ext)
-    x = 0.72; azul = cfg.get('color', '#014f7d')
+    x = min(0.72, max(0.5, 0.03 + W + 0.035)); azul = cfg.get('color', '#014f7d')
+    ancho_txt = int((0.985 - x - 0.04) * 11 * 72 / (7 * 0.52))   # caracteres que caben a 7 pt
+    corta = lambda t: t if len(t) <= ancho_txt else t[:ancho_txt - 1] + '…'
     fig.text(x, 0.945, cfg['titulo'], fontsize=13, weight='bold', va='top', wrap=True)
     if cfg.get('subtitulo'): fig.text(x, 0.905, cfg['subtitulo'], fontsize=8.5, va='top', color='#444', wrap=True)
     y = 0.85; fig.text(x, y, 'Convenciones', fontsize=9.5, weight='bold', color=azul); y -= 0.03
     for c in capas_cfg[:14]:
         fig.add_artist(mp.Rectangle((x, y - 0.006), 0.03, 0.012, transform=fig.transFigure, fc=c['color'], ec='#222', lw=0.5))
-        fig.text(x + 0.038, y, f"{c['capa']} ({c['tipo_nombre'].lower()}, {_num(c['longitud_m'], 0)} m)", fontsize=7, va='center'); y -= 0.024
+        fig.text(x + 0.038, y, corta(f"{c['capa']} ({c['tipo_nombre'].lower()}, {_num(c['longitud_m'], 0)} m)"), fontsize=7, va='center'); y -= 0.024
     if M['limites']:
         fig.add_artist(matplotlib.lines.Line2D([x, x + 0.03], [y, y], transform=fig.transFigure, color='#c62828', lw=1.3, ls=(0, (6, 3))))
         fig.text(x + 0.038, y, 'Límite del título', fontsize=7, va='center'); y -= 0.024
