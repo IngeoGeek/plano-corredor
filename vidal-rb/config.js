@@ -1,6 +1,6 @@
 /* Vidal RB · maqueta 3D del pozo PAD1 y los mantos de más de 1 m. Único archivo que se edita a mano. */
 self.PLANO = {
-  version: 3,
+  version: 4,
   titulo: 'Vidal RB · Pozo PAD1',
   subtitulo: 'Mantos de carbón de más de 1 m · línea de sección L-0 · predio Vidal (Río Blanco), contrato FHD-161',
   color: '#014f7d',
@@ -21,7 +21,7 @@ self.PLANO = {
     ['Cara L-0', 'Sección con el PAD1 y los mantos que corta'],
     ['Mitad NE', 'Terreno transparente: se ven M120, M100, M90 y M80 como planos'],
     ['Mantos', 'Rumbo N33–43E, buzamiento 45–46° al SE (trazas GDB y sección L-0)'],
-    ['Límites', 'Predio Vidal en amarillo, licencia ambiental en verde y título FHD-161 en negro discontinuo'],
+    ['Límites', 'Predio Vidal en amarillo y licencia ambiental en verde'],
     ['Terreno', 'Curvas c/2 m (GDB FHD-161) y DSM del vuelo donde no hay curvas'],
     ['Ortomosaico', 'DJI Terra, 24 nov. 2026, 1 321 fotos con RTK FIX'],
     ['Sistema', 'MAGNA-SIRGAS / Colombia Bogotá (EPSG:3116)']
