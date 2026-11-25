@@ -16,7 +16,7 @@ self.PLANO = {
   ],
   ficha: [
     ['Escala', '1:2 000 · sin exageración vertical'],
-    ['Bloque', '1,2 × 0,64 km cortado por la línea L-0 · base a −110 msnm'],
+    ['Bloque', '1,2 × 0,94 km cortado por la línea L-0 · base a −110 msnm'],
     ['Cara L-0', 'Sección con el PAD1 y los mantos que corta'],
     ['Mitad NE', 'Terreno transparente: se ven M120, M100, M90 y M80 como planos'],
     ['Mantos', 'Rumbo N33–43E, buzamiento 45–46° SE (trazas GDB y sección L-0)'],
