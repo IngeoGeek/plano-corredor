@@ -6,127 +6,178 @@
 <meta name="theme-color" content="#014f7d">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icono-192.png">
-<title>Plano 2D y maqueta 3D</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<!-- Kit manual «Plano QGIS → maqueta 3D, RA, GPS y QR». No hace falta tocar este archivo: todo se ajusta en config.js -->
+<title>Vidal RB · maqueta 3D</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<!-- Visor v2: diseño técnico tipo lámina y modo anotación. Todo se ajusta en config.js -->
 <script src="config.js"></script>
 <script type="module" src="lib/model-viewer.min.js"></script>
 <script src="lib/openseadragon.min.js" defer></script>
-<script src="lib/gps-campo.js"></script>
 <style>
 :root{
-  --bg:#f2f4f6; --surface:#ffffff; --ink:#111518; --muted:#5b6168; --rule:#c9ced3;
-  --accent:#014f7d; --accent-ink:#ffffff; --stage:#e3e7ea; --pin:#d2382b;
-  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
-  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --mesa:#e6eaec; --hoja:#ffffff; --tinta:#1c252b; --gris:#56626b; --linea:#c4cdd3; --linea-suave:#dde3e7;
+  --azul:#014f7d; --azul-suave:#e4eef4; --fondo-visor:#d9e0e4; --pin:#c62828;
+  --cond:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --texto:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --barra:64px;
 }
-@media (prefers-color-scheme: dark){:root{
-  --bg:#0f1418; --surface:#182027; --ink:#e8edf1; --muted:#9aa4ad; --rule:#2c3640;
-  --accent-ink:#ffffff; --stage:#1a232b; color-scheme:dark}}
 [hidden]{display:none!important}
-html,body{height:100%}
-html,body,.wrap{overflow-anchor:none}
-#hueco{border-radius:10px;background:var(--stage)}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 28px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--mesa);color:var(--tinta);font:15px/1.5 var(--texto);font-variant-numeric:tabular-nums}
 body.bloqueo{overflow:hidden}
-.wrap{max-width:1100px;margin:0 auto;display:grid;gap:14px}
-header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
-h1{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4vw,2.1rem);letter-spacing:.01em;line-height:1.1;margin:0;text-wrap:balance}
-h2{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:0}
-.sub{color:var(--muted);margin:0}
-.stage{position:relative;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--stage)}
-.vista{display:block;width:100%;height:min(70vh,640px);min-height:360px;background:var(--stage)}
-model-viewer.vista{--poster-color:var(--stage)}
-#osd{background:#f5f6f7}
-.stage.full{position:fixed;inset:0;z-index:50;border:0;border-radius:0;
-  --top-full:env(safe-area-inset-top,0px);--right-full:env(safe-area-inset-right,0px);--left-full:env(safe-area-inset-left,0px)}
-.stage.full .vista{height:100%;min-height:0}
-.herr{position:absolute;top:calc(10px + var(--top-full,0px));right:calc(10px + var(--right-full,0px));display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;z-index:3;max-width:104px}
-.modos{position:absolute;top:calc(10px + var(--top-full,0px));left:calc(10px + var(--left-full,0px));z-index:3;display:inline-flex;
-  border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:0 1px 6px rgb(0 0 0 / .12)}
-.modos button{border:0;background:transparent;color:var(--ink);font:600 14px/1 var(--body);padding:0 14px;height:44px;cursor:pointer}
-.modos button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.icono{width:44px;height:44px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
-  display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 6px rgb(0 0 0 / .12)}
-.icono svg{width:22px;height:22px}
-.icono[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.ar-btn{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:3;
-  background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px;max-width:calc(100% - 32px);
-  font:600 16px/1.2 var(--body);text-align:center;cursor:pointer;box-shadow:0 2px 10px rgb(0 0 0 / .2)}
-.ar-btn:focus-visible,.icono:focus-visible,.lnk:focus-visible,.modos button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
-.yo{width:18px;height:18px;border-radius:50%;background:var(--pin);border:3px solid #fff;box-shadow:0 0 0 2px var(--pin),0 2px 8px rgb(0 0 0 / .35);padding:0;position:relative}
-.yo span{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);white-space:nowrap;background:var(--pin);color:#fff;
-  font:600 12px/1 var(--body);padding:5px 8px;border-radius:6px}
-#aviso{margin:0;color:var(--muted);min-height:1.5em}
-#aviso.ok{color:var(--ink)}
-.recorrido{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:-.3rem 0 0;font-size:.95rem;color:var(--muted)}
-.recorrido b{color:#1f4e8c;font-weight:600}
-.yo.vieja{opacity:.55}
-#aviso.mal{color:#b3261e;font-weight:600}
-.acciones{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
-.lnk{background:none;border:0;padding:0;color:var(--accent);font:500 15px var(--body);text-decoration:underline;cursor:pointer}
-.lnk:disabled{color:var(--ink);text-decoration:none;cursor:default}
-a{color:var(--accent)}
-@media (prefers-color-scheme: dark){a,.lnk{color:#7cc0ea}}
-.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:0}
-.ficha div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
-.ficha dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted)}
-.ficha dd{margin:2px 0 0;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
-.capas{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.capas .titulo-capas{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--muted);margin-right:4px}
-.capa{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);
-  border-radius:999px;padding:8px 12px;font:500 14px/1 var(--body);cursor:pointer}
-.capa i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--c)}
-.capa[aria-pressed="false"]{color:var(--muted);background:transparent}
-.capa[aria-pressed="false"] i{background:transparent}
-.capa:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
-.et{pointer-events:none;border:0;background:none;padding:0;width:0;height:0;position:relative;transition:opacity .2s}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--azul);outline-offset:2px}
+
+/* Barra de título, como el encabezado de una lámina */
+.barra{display:flex;align-items:center;gap:16px;min-height:var(--barra);padding:8px max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left));
+  background:var(--hoja);border-bottom:2px solid var(--azul)}
+.barra img{height:36px;width:auto;flex:none}
+.barra .tit{min-width:0;border-left:1px solid var(--linea);padding-left:16px}
+h1{font:600 1.35rem/1.15 var(--cond);margin:0;letter-spacing:.005em}
+.sub{margin:0;color:var(--gris);font-size:.88rem;line-height:1.3}
+
+/* Mesa de trabajo: visor + rótulo */
+.mesa{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:calc(100vh - var(--barra));height:calc(100dvh - var(--barra))}
+.visor{position:relative;background:var(--fondo-visor);overflow:hidden;min-height:0}
+.visor::after{content:"";position:absolute;inset:12px;border:1px solid rgb(28 37 43 / .28);pointer-events:none;z-index:2}
+.vista{display:block;width:100%;height:100%;background:transparent}
+model-viewer.vista{--poster-color:transparent}
+#osd{background:#f4f6f7}
+.visor.full{position:fixed;inset:0;z-index:50}
+
+.modos{position:absolute;top:24px;left:24px;z-index:3;display:inline-flex;background:var(--hoja);border:1px solid var(--linea);border-radius:4px;overflow:hidden}
+.modos button{border:0;background:transparent;padding:0 14px;height:40px;font:500 14px/1 var(--texto);cursor:pointer}
+.modos button+button{border-left:1px solid var(--linea)}
+.modos button[aria-pressed="true"]{background:var(--azul);color:#fff}
+.herr{position:absolute;top:24px;right:24px;z-index:3;display:flex;flex-direction:column;gap:6px}
+.icono{width:40px;height:40px;border-radius:4px;border:1px solid var(--linea);background:var(--hoja);display:grid;place-items:center;cursor:pointer}
+.icono svg{width:20px;height:20px}
+.icono[aria-pressed="true"]{background:var(--azul);border-color:var(--azul);color:#fff}
+.icono.anotar{background:var(--azul);border-color:var(--azul);color:#fff}
+
+/* Instrumentos de la lámina: norte y escala */
+.instr{position:absolute;left:24px;bottom:24px;z-index:3;display:flex;align-items:flex-end;gap:14px;pointer-events:none}
+.norte{width:52px;height:52px;background:var(--hoja);border:1px solid var(--linea);border-radius:50%;display:grid;place-items:center}
+.norte svg{width:40px;height:40px;transition:transform .08s linear}
+.escala{background:rgb(255 255 255 / .92);border:1px solid var(--linea);padding:6px 10px 5px;border-radius:3px;font-size:12px;color:var(--tinta)}
+.escala .barra-esc{height:6px;border:1px solid var(--tinta);border-top:0;margin-bottom:3px;
+  background:linear-gradient(90deg,var(--tinta) 0 50%,transparent 50% 100%)}
+.ra-btn{position:absolute;right:24px;bottom:24px;z-index:3;background:var(--hoja);border:1px solid var(--azul);color:var(--azul);
+  border-radius:4px;padding:10px 14px;font:600 14px/1.2 var(--texto);cursor:pointer}
+.yo{width:18px;height:18px;border-radius:50%;background:var(--pin);border:3px solid #fff;box-shadow:0 0 0 2px var(--pin);padding:0;position:relative}
+.yo span{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);white-space:nowrap;background:var(--pin);color:#fff;font:600 12px/1 var(--texto);padding:5px 8px;border-radius:3px}
+.et{pointer-events:none;border:0;background:none;padding:0;width:0;height:0;position:relative}
 .et:not([data-visible]){opacity:0}
 .et::before{content:"";position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff}
-.et span{position:absolute;left:0;bottom:9px;transform:translateX(-50%);white-space:nowrap;background:var(--c);color:var(--t,#fff);
-  font:600 10px/1 var(--body);padding:3px 5px;border-radius:4px;box-shadow:0 1px 4px rgb(0 0 0 / .3)}
+.et span{position:absolute;left:0;bottom:9px;transform:translateX(-50%);white-space:nowrap;background:var(--c);color:var(--t,#fff);font:600 11px/1 var(--texto);padding:3px 5px;border-radius:2px}
 .et.sin-texto span{display:none}
-@media (prefers-reduced-motion: reduce){.et{transition:none}}
-.membrete{background:var(--surface);border:1px solid var(--rule);border-top:6px solid var(--accent);border-radius:10px;padding:18px 20px;display:grid;gap:6px}
-.membrete-rol{margin:0;font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--muted)}
-.membrete h2{font-size:1.6rem;letter-spacing:.01em;color:var(--ink)}
-.membrete-titulos{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:0}
-.membrete-titulos li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 16px;padding:8px 0;border-top:1px solid var(--rule)}
-.membrete-titulos li span:first-child{font-weight:600}
-.membrete-titulos li span+span{color:var(--muted)}
-.pie{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding-top:14px;border-top:3px solid var(--accent)}
-.pie-logo{background:#fff;border-radius:8px;padding:8px 12px;line-height:0}
-.pie-logo img{height:44px;width:auto;max-width:100%}
-.pie p{margin:0;font-family:var(--display);font-weight:700;font-size:1.2rem;letter-spacing:.04em;color:var(--accent)}
-@media (prefers-color-scheme: dark){.pie p{color:#7cc0ea}}
-.credito{font-size:12px;color:var(--muted);margin:0}
+
+/* Rótulo lateral */
+.rotulo{background:var(--hoja);border-left:1px solid var(--linea);overflow-y:auto;display:flex;flex-direction:column}
+.bloque{padding:16px 20px;border-bottom:1px solid var(--linea)}
+h2{font:600 .8rem/1.2 var(--texto);margin:0 0 10px;color:var(--tinta);text-transform:uppercase;letter-spacing:.04em}
+#aviso{margin:0;font-size:.9rem;color:var(--gris)}
+#aviso.ok{color:var(--tinta)} #aviso.mal{color:#b3261e;font-weight:600}
+.ficha{margin:0;display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);column-gap:12px}
+.ficha dt,.ficha dd{padding:6px 0;border-top:1px solid var(--linea-suave);margin:0;font-size:.88rem}
+.ficha dt{color:var(--gris)} .ficha dd{text-align:left}
+.ficha dt:first-of-type,.ficha dd:first-of-type{border-top:0}
+.capas{display:flex;flex-wrap:wrap;gap:6px}
+.capa{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--linea);background:var(--hoja);border-radius:3px;padding:6px 10px;font-size:.88rem;cursor:pointer}
+.capa i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.capa[aria-pressed="false"]{color:var(--gris)} .capa[aria-pressed="false"] i{background:transparent;box-shadow:inset 0 0 0 2px var(--c)}
+.acciones{display:grid;gap:8px;justify-items:start}
+.lnk{background:none;border:0;padding:0;color:var(--azul);font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+.lnk:disabled{color:var(--tinta);text-decoration:none;cursor:default}
+a{color:var(--azul)}
+.elaboro p{margin:0}
+.elaboro .nombre{font:600 1.05rem/1.3 var(--cond)}
+.elaboro ul{list-style:none;margin:6px 0 0;padding:0;font-size:.82rem;color:var(--gris);display:grid;gap:3px}
+.firma{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:2px solid var(--azul)}
+.firma img{height:34px;width:auto}
+.firma span{font:600 1rem var(--cond);color:var(--azul)}
+.credito{font-size:.75rem;color:var(--gris);margin:0;padding:12px 20px 16px}
+
+
+/* Registro de quién revisa */
+#quien{position:fixed;inset:0;z-index:130;background:rgb(28 37 43 / .55);display:grid;place-items:center;padding:16px}
+.q-caja{background:var(--hoja);border:1px solid var(--tinta);width:min(440px,100%);box-shadow:0 10px 30px rgb(0 0 0 / .25)}
+.q-caja header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:2px solid var(--azul)}
+.q-caja header img{height:28px;width:auto}
+.q-caja header strong{font:600 1.05rem/1.2 var(--cond)}
+.q-cuerpo{padding:16px 18px 18px;display:grid;gap:12px}
+.q-cuerpo p{margin:0;font-size:.9rem;color:var(--gris)}
+.q-cuerpo label{display:grid;gap:4px;font-size:.85rem;font-weight:500}
+.q-cuerpo input{height:42px;border:1px solid var(--linea);border-radius:3px;padding:0 10px;font:15px var(--texto);color:var(--tinta)}
+.q-cuerpo input:focus{outline:2px solid var(--azul);outline-offset:0;border-color:var(--azul)}
+.q-cuerpo button{height:44px;border:0;border-radius:3px;background:var(--azul);color:#fff;font:600 15px var(--texto);cursor:pointer}
+.q-cuerpo small{font-size:.78rem;color:var(--gris);line-height:1.4}
+.revisor{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.88rem}
+.revisor b{font-weight:600}
+
+/* Modo anotación */
+#anota{position:fixed;inset:0;z-index:120;background:#2a3238;display:grid;grid-template-rows:auto minmax(0,1fr) auto;color:#fff}
+.an-sup{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));background:#1f262b}
+.an-sup strong{font:600 1.05rem var(--cond)}
+.an-sup input{flex:1 1 260px;min-width:0;height:38px;border-radius:4px;border:1px solid #56626b;background:#2a3238;color:#fff;padding:0 10px;font:14px var(--texto)}
+.an-sup input::placeholder{color:#a9b3ba}
+.an-zona{position:relative;display:grid;place-items:center;padding:12px;min-height:0}
+#lz{max-width:100%;max-height:100%;touch-action:none;background:#fff;cursor:crosshair;box-shadow:0 0 0 1px #56626b}
+#lz-texto{position:absolute;z-index:2;min-width:120px;font:600 16px var(--texto);padding:4px 6px;border:2px solid #fff;border-radius:3px;background:rgb(0 0 0 / .55);color:#fff}
+.an-inf{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:10px max(14px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:#1f262b}
+.grupo{display:flex;gap:6px;align-items:center}
+.herr-an,.color{height:40px;min-width:40px;border-radius:4px;border:1px solid #56626b;background:#2a3238;color:#fff;cursor:pointer;display:grid;place-items:center;padding:0 10px;font-size:14px}
+.herr-an svg{width:20px;height:20px}
+.herr-an[aria-pressed="true"]{background:#fff;color:var(--tinta);border-color:#fff}
+.color{padding:0;width:34px;min-width:34px;height:34px;border-radius:50%;background:var(--c);border:2px solid #1f262b;box-shadow:0 0 0 1px #56626b}
+.color[aria-pressed="true"]{box-shadow:0 0 0 2px #fff}
+.an-acc{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}
+.btn{height:40px;border-radius:4px;border:1px solid #fff;background:transparent;color:#fff;padding:0 14px;font-weight:600;cursor:pointer}
+.btn.prim{background:#fff;color:var(--azul)}
+#imprimir{display:none}
+@media print{
+  body.imprimiendo>*:not(#imprimir){display:none!important}
+  body.imprimiendo #imprimir{display:block} #imprimir img{width:100%;height:auto}
+  @page{size:letter landscape;margin:10mm}
+}
+
+/* Realidad aumentada en el navegador (8th Wall) */
 #xr{position:fixed;inset:0;z-index:100;background:#000}
 #camerafeed{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#hud{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;
-  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
-  background:rgb(20 25 23 / .82);color:#e7ebe6}
+#hud{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgb(20 25 23 / .82);color:#e7ebe6}
 #estado{margin:0;font-weight:600}
-.fila{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
-.boton{border:1px solid #556159;background:transparent;color:#e7ebe6;font:500 14px/1 var(--body);padding:10px 14px;border-radius:8px;cursor:pointer}
+.fila{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
+.boton{border:1px solid #556159;background:transparent;color:#e7ebe6;padding:10px 14px;border-radius:4px;cursor:pointer}
 .boton[aria-pressed="true"]{background:#e7ebe6;color:#141917}
+
+/* Celular y tableta vertical */
+@media (max-width: 999px){
+  .mesa{display:block;height:auto}
+  .visor{height:70vh;height:70svh;min-height:360px}
+  .rotulo{border-left:0}
+  .barra .tit{border-left:0;padding-left:0}
+  .barra img{height:22px}
+  .barra{gap:12px}
+  .modos,.herr{top:18px} .modos,.instr{left:18px} .herr,.ra-btn{right:18px} .instr,.ra-btn{bottom:18px}
+  .visor::after{inset:8px}
+}
+@media (prefers-reduced-motion: reduce){ .norte svg{transition:none} }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1 id="titulo"></h1>
-    <p class="sub" id="subtitulo"></p>
-  </header>
+<header class="barra">
+  <img id="barra-logo" alt="" hidden>
+  <div class="tit"><h1 id="titulo"></h1><p class="sub" id="subtitulo"></p></div>
+</header>
 
-  <div class="stage" id="stage">
+<main class="mesa">
+  <section class="visor" id="stage" aria-label="Visor">
     <model-viewer id="mv" class="vista"
       ar ar-modes="webxr quick-look" ar-scale="fixed" ar-placement="floor"
-      camera-controls touch-action="pan-y" environment-image="neutral" exposure="0.85" tone-mapping="neutral"
-      shadow-intensity="1" shadow-softness="0.8"
-      camera-orbit="-10deg 52deg auto" min-camera-orbit="auto 5deg 0.15m" max-camera-orbit="auto 88deg 2.6m"
-      field-of-view="32deg" interaction-prompt="auto">
+      camera-controls touch-action="pan-y" environment-image="neutral" exposure="0.95" tone-mapping="neutral"
+      shadow-intensity="0.35" shadow-softness="1"
+      camera-orbit="0deg 40deg auto" min-camera-orbit="auto 0deg 0.15m" max-camera-orbit="auto 80deg 2.6m"
+      field-of-view="22deg" interaction-prompt="none">
       <span slot="ar-button" hidden></span>
       <button class="yo" slot="hotspot-yo" id="yo" data-position="0m 0m 0m" data-normal="0m 1m 0m" hidden><span>Usted está aquí</span></button>
     </model-viewer>
@@ -136,6 +187,9 @@ a{color:var(--accent)}
       <button id="m-3d" type="button" aria-pressed="true">Maqueta 3D</button>
     </div>
     <div class="herr">
+      <button class="icono anotar" id="btn-anotar" type="button" aria-label="Anotar sobre esta vista" title="Anotar sobre esta vista">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+      </button>
       <button class="icono" id="btn-mas" type="button" aria-label="Acercar el plano" title="Acercar" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </button>
@@ -149,43 +203,84 @@ a{color:var(--accent)}
         <svg id="ico-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
     </div>
-    <button class="ar-btn" id="btn-ra" type="button">Ver en tu espacio · tamaño real</button>
-  </div>
-  <div id="hueco" hidden></div>
-  <div id="yo2d" class="yo" hidden><span>Usted está aquí</span></div>
-
-  <div class="capas" id="capas" role="group" aria-label="Etiquetas de la maqueta 3D" hidden>
-    <span class="titulo-capas">Etiquetas 3D</span>
-  </div>
-
-  <p id="aviso" role="status" aria-live="polite">Cambia entre el plano 2D y la maqueta 3D con los botones de arriba. Gira con un dedo y acerca con dos.</p>
-
-  <div class="recorrido" id="recorrido" hidden>
-    <span>Recorrido: <b id="rec-largo">0 m</b> · <span id="rec-n">0</span> puntos</span>
-    <button class="lnk" id="rec-gpx" type="button">Descargar GPX</button>
-    <button class="lnk" id="rec-borrar" type="button">Borrar recorrido</button>
-  </div>
-
-  <div class="acciones">
-    <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
-    <button class="lnk" id="btn-instalar" type="button" hidden>Instalar como aplicación</button>
-    <a id="dl-usdz" download hidden>Descargar maqueta para iPhone (.usdz)</a>
-  </div>
-
-  <dl class="ficha" id="ficha"></dl>
-
-  <section class="membrete" id="membrete" aria-labelledby="elaboro-nombre" hidden>
-    <p class="membrete-rol">Elaboró</p>
-    <h2 id="elaboro-nombre"></h2>
-    <ul class="membrete-titulos" id="elaboro-titulos"></ul>
+    <div class="instr">
+      <div class="norte" title="Norte"><svg id="flecha-norte" viewBox="0 0 40 40" aria-label="Flecha de norte" role="img">
+        <text x="20" y="10.5" text-anchor="middle" font-size="10" font-weight="600" font-family="IBM Plex Sans Condensed, Arial Narrow, sans-serif" fill="#1c252b">N</text>
+        <path d="M20 13 L25.5 29 L20 26 L14.5 29 Z" fill="#1c252b"/><path d="M20 26 L25.5 29 L20 37 L14.5 29 Z" fill="none" stroke="#1c252b" stroke-width="1.1" stroke-linejoin="round"/></svg></div>
+      <div class="escala" id="escala" hidden><div class="barra-esc" id="barra-esc"></div><span id="txt-esc"></span></div>
+    </div>
+    <button class="ra-btn" id="btn-ra" type="button" hidden>Ver en realidad aumentada</button>
   </section>
 
-  <p class="credito">Visor 3D: model-viewer (Google). Plano 2D: OpenSeadragon. En celulares sin el visor de realidad aumentada de Google se usa el motor 8th Wall de Niantic Spatial, Inc., bajo el <a href="lib/8thwall/LICENSE">XR Engine License Agreement</a>, sin garantías de ningún tipo.</p>
-  <footer class="pie" id="pie" hidden>
-    <div class="pie-logo" id="pie-logo"><img id="pie-img" alt=""></div>
-    <p id="pie-texto"></p>
-  </footer>
+  <aside class="rotulo" aria-label="Rótulo del plano">
+    <div class="bloque"><p id="aviso" role="status">Gira la maqueta con un dedo o con el ratón y acerca con dos dedos o la rueda.</p></div>
+    <div class="bloque" id="bloque-revisor" hidden><h2>Revisión</h2><div class="revisor"><span>Revisa: <b id="revisor-nombre"></b></span><button class="lnk" id="btn-revisor" type="button">Cambiar</button></div></div>
+    <div class="bloque" id="bloque-capas" hidden><h2>Etiquetas</h2><div class="capas" id="capas" role="group" aria-label="Etiquetas de la maqueta 3D"></div></div>
+    <div class="bloque"><h2>Ficha técnica</h2><dl class="ficha" id="ficha"></dl></div>
+    <div class="bloque acciones">
+      <button class="lnk" id="btn-offline" type="button">Guardar para usar sin internet</button>
+      <button class="lnk" id="btn-instalar" type="button" hidden>Instalar como aplicación</button>
+      <a id="dl-usdz" download hidden>Descargar maqueta para iPhone (.usdz)</a>
+    </div>
+    <div class="bloque elaboro" id="elaboro" hidden><h2>Elaboró</h2><p class="nombre" id="elaboro-nombre"></p><ul id="elaboro-titulos"></ul></div>
+    <p class="credito">Visor 3D: model-viewer (Google). Plano 2D: OpenSeadragon. En celulares sin el visor de realidad aumentada de Google se usa el motor 8th Wall de Niantic Spatial, Inc., bajo el <a href="lib/8thwall/LICENSE">XR Engine License Agreement</a>, sin garantías de ningún tipo.</p>
+    <div class="firma" id="pie" hidden><img id="pie-img" alt=""><span id="pie-texto"></span></div>
+  </aside>
+</main>
+<div id="yo2d" class="yo" hidden><span>Usted está aquí</span></div>
+
+<!-- Quién revisa -->
+<div id="quien" hidden role="dialog" aria-modal="true" aria-labelledby="q-titulo">
+  <form class="q-caja" id="q-form">
+    <header><img id="q-logo" alt="" hidden><strong id="q-titulo">¿Quién revisa la maqueta?</strong></header>
+    <div class="q-cuerpo">
+      <p>Escribe tu nombre para entrar. Queda en el registro de revisiones del proyecto y en el rótulo de las vistas que anotes.</p>
+      <label>Nombre<input id="q-nombre" name="nombre" autocomplete="name" required maxlength="80"></label>
+      <label>Cargo o entidad <span style="font-weight:400;color:var(--gris)">(opcional)</span><input id="q-entidad" name="entidad" autocomplete="organization" maxlength="80"></label>
+      <button type="submit">Entrar a la maqueta</button>
+      <small id="q-aviso">Se guardan tu nombre, la fecha y hora de entrada y el tipo de equipo (celular o computador, sistema y navegador). No se guarda tu ubicación.</small>
+    </div>
+  </form>
 </div>
+
+<!-- Modo anotación -->
+<div id="anota" hidden role="dialog" aria-modal="true" aria-labelledby="an-titulo">
+  <div class="an-sup">
+    <strong id="an-titulo">Anotar sobre la vista</strong>
+    <input id="an-nota" type="text" maxlength="160" placeholder="Nota de la visita (aparece en el rótulo de la imagen)" aria-label="Nota de la visita">
+    <button class="btn" id="an-cerrar" type="button">Cerrar</button>
+  </div>
+  <div class="an-zona" id="an-zona"><canvas id="lz" aria-label="Vista para anotar"></canvas><input id="lz-texto" type="text" hidden aria-label="Texto de la anotación"></div>
+  <div class="an-inf">
+    <div class="grupo" role="group" aria-label="Herramienta">
+      <button class="herr-an" data-h="lapiz" type="button" aria-pressed="true" title="Lápiz" aria-label="Lápiz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button>
+      <button class="herr-an" data-h="flecha" type="button" aria-pressed="false" title="Flecha" aria-label="Flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5M10 5h9v9"/></svg></button>
+      <button class="herr-an" data-h="circulo" type="button" aria-pressed="false" title="Círculo" aria-label="Círculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="7"/></svg></button>
+      <button class="herr-an" data-h="texto" type="button" aria-pressed="false" title="Texto" aria-label="Texto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg></button>
+    </div>
+    <div class="grupo" role="group" aria-label="Color">
+      <button class="color" type="button" style="--c:#d32f2f" data-c="#d32f2f" aria-pressed="true" aria-label="Rojo" title="Rojo"></button>
+      <button class="color" type="button" style="--c:#f5b700" data-c="#f5b700" aria-pressed="false" aria-label="Amarillo" title="Amarillo"></button>
+      <button class="color" type="button" style="--c:#2e9e44" data-c="#2e9e44" aria-pressed="false" aria-label="Verde" title="Verde"></button>
+      <button class="color" type="button" style="--c:#1976d2" data-c="#1976d2" aria-pressed="false" aria-label="Azul" title="Azul"></button>
+      <button class="color" type="button" style="--c:#ffffff" data-c="#ffffff" aria-pressed="false" aria-label="Blanco" title="Blanco"></button>
+    </div>
+    <div class="grupo" role="group" aria-label="Grosor">
+      <button class="herr-an" data-g="3" type="button" aria-pressed="false" title="Trazo fino">Fino</button>
+      <button class="herr-an" data-g="6" type="button" aria-pressed="true" title="Trazo grueso">Grueso</button>
+    </div>
+    <div class="grupo">
+      <button class="herr-an" id="an-deshacer" type="button" title="Deshacer el último trazo">Deshacer</button>
+      <button class="herr-an" id="an-limpiar" type="button" title="Borrar todos los trazos">Borrar todo</button>
+    </div>
+    <div class="an-acc">
+      <button class="btn" id="an-imprimir" type="button">Imprimir o PDF</button>
+      <button class="btn" id="an-compartir" type="button" hidden>Compartir</button>
+      <button class="btn prim" id="an-descargar" type="button">Descargar imagen</button>
+    </div>
+  </div>
+</div>
+<div id="imprimir"><img id="imp-img" alt="Vista anotada"></div>
 
 <div id="xr" hidden>
   <canvas id="camerafeed"></canvas>
@@ -200,74 +295,95 @@ a{color:var(--accent)}
 
 <script>
 const C = self.PLANO;
-// Qué ofrece la página (config.js → funciones). Si falta algo, queda activado como antes.
-const FX = Object.assign({gps: true, recorrido: true, sin_internet: true, instalar: true}, (C && C.funciones) || {});
-if (!FX.gps) FX.recorrido = false;
 const $ = (s) => document.querySelector(s);
 const mv = $('#mv'), stage = $('#stage'), aviso = $('#aviso');
+// Sin bajar la resolución automáticamente: así la captura para anotar sale completa y nítida
+customElements.whenDefined('model-viewer').then(() => { const MV = customElements.get('model-viewer'); if ('minimumRenderScale' in MV) MV.minimumRenderScale = 1; });
 function avisar(t, tipo){ aviso.textContent = t; aviso.className = tipo || ''; }
 if (!C) { document.body.innerHTML = '<p style="padding:24px;font:16px sans-serif">No se pudo leer <b>config.js</b>. Revisa que esté en la misma carpeta que index.html y que no le falte una coma o una comilla.</p>'; throw new Error('config'); }
 
-// ?modo=navegador → siempre el motor de RA del navegador (celulares sin ARCore)
 const MODO = new URLSearchParams(location.search).get('modo') === 'navegador' ? 'navegador' : 'auto';
 const H = C.hoja, M = C.marco, R = C.relieve, A = C.archivos;
-const ESC = (M.E_max - M.E_min) / (M.ancho_mm / 1000);          // escala del mapa (p. ej. 65 000)
-const FUERZA = (R.z_max - R.z_min) * R.exageracion / ESC;          // altura del relieve en la maqueta (m)
-const BASE_REL = 0.0005;                                           // el relieve va 0,5 mm sobre la hoja
+const ESC = (M.E_max - M.E_min) / (M.ancho_mm / 1000);
+const FUERZA = (R.z_max - R.z_min) * R.exageracion / ESC;
+const BASE_REL = 0.0005;
 const cm = (mm) => (mm / 10).toLocaleString('es-CO', {maximumFractionDigits: 1});
 const TAM = `${cm(H.ancho_mm)} × ${cm(H.alto_mm)} cm`;
+let vistaActual = '3d';
 
 /* ---------- Textos desde config.js ---------- */
-document.title = `${C.titulo} · Plano 2D y maqueta 3D`;
+document.title = `${C.titulo}, visor técnico`;
 $('#titulo').textContent = C.titulo; $('#subtitulo').textContent = C.subtitulo || '';
-if (C.color) { document.documentElement.style.setProperty('--accent', C.color); document.querySelector('meta[name="theme-color"]').content = C.color; }
-mv.setAttribute('alt', `Maqueta en relieve de ${C.titulo}, ${TAM}`);
+if (C.color) { document.documentElement.style.setProperty('--azul', C.color); document.querySelector('meta[name="theme-color"]').content = C.color; }
+mv.setAttribute('alt', `Maqueta en relieve de ${C.titulo}`);
 if (A.poster) mv.setAttribute('poster', A.poster);
 if (A.modelo_iphone) { mv.setAttribute('ios-src', A.modelo_iphone); $('#dl-usdz').href = A.modelo_iphone; }
 mv.setAttribute('src', A.modelo);
 const ficha = $('#ficha');
-[['Tamaño en RA', `${TAM} (fijo)`], ...(C.ficha || [])].forEach(([t, v]) => {
-  const d = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
-  dt.textContent = t; dd.textContent = v; d.append(dt, dd); ficha.appendChild(d); });
+[...(C.ficha || []), ['Tamaño en realidad aumentada', TAM]].forEach(([t, v]) => {
+  const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = t; dd.textContent = v; ficha.append(dt, dd); });
 if (C.elaboro && C.elaboro.nombre) {
-  $('#membrete').hidden = false; $('#elaboro-nombre').textContent = C.elaboro.nombre;
-  (C.elaboro.titulos || []).forEach(([a, b]) => { const li = document.createElement('li'), s1 = document.createElement('span');
-    s1.textContent = a; li.appendChild(s1); if (b) { const s2 = document.createElement('span'); s2.textContent = b; li.appendChild(s2); }
-    $('#elaboro-titulos').appendChild(li); });
+  $('#elaboro').hidden = false; $('#elaboro-nombre').textContent = C.elaboro.nombre;
+  (C.elaboro.titulos || []).forEach(([a, b]) => { const li = document.createElement('li'); li.textContent = b ? `${a}, ${b}` : a; $('#elaboro-titulos').appendChild(li); });
 }
+let LOGO = null;
 if (C.pie && (C.pie.logo || C.pie.texto)) {
   $('#pie').hidden = false; $('#pie-texto').textContent = C.pie.texto || '';
-  $('#pie-img').onerror = () => { $('#pie-logo').hidden = true; };
-  if (C.pie.logo) { $('#pie-img').src = C.pie.logo; $('#pie-img').alt = C.pie.texto || 'Logo'; } else $('#pie-logo').hidden = true;
+  if (C.pie.logo) {
+    $('#pie-img').src = C.pie.logo; $('#pie-img').alt = C.pie.texto || 'Logo';
+    const bl = $('#barra-logo'); bl.src = C.pie.logo; bl.alt = C.pie.texto || 'Logo'; bl.hidden = false;
+    bl.onerror = () => { bl.hidden = true; }; $('#pie-img').onerror = () => { $('#pie-img').hidden = true; };
+    LOGO = new Image(); LOGO.src = C.pie.logo;
+  } else $('#pie-img').hidden = true;
 }
-mv.addEventListener('error', () => avisar(`No se pudo abrir la maqueta «${A.modelo}». Revisa el nombre del archivo en config.js y que esté en la carpeta.`, 'mal'));
+mv.addEventListener('error', () => avisar(`No se pudo abrir la maqueta «${A.modelo}». Revisa el nombre del archivo en config.js.`, 'mal'));
 
 /* ---------- Vista 2D / 3D ---------- */
 let visor2d = null, overlay2d = false, PXMM = null;
 function iniciar2d(){
   if (visor2d || !window.OpenSeadragon) return;
   const fuente = /\.dzi$/i.test(A.plano2d) ? A.plano2d : {type: 'image', url: A.plano2d};
-  visor2d = OpenSeadragon({ element: document.getElementById('osd'), tileSources: fuente,
+  visor2d = OpenSeadragon({ element: document.getElementById('osd'), tileSources: fuente, drawer: 'canvas',
     showNavigationControl: false, maxZoomPixelRatio: 2.5, minZoomImageRatio: 0.9, visibilityRatio: 0.9,
     constrainDuringPan: true, immediateRender: false, gestureSettingsTouch: {pinchRotate: false, flickEnabled: true},
     gestureSettingsMouse: {clickToZoom: false, dblClickToZoom: true} });
-  visor2d.addHandler('open', () => { PXMM = visor2d.world.getItemAt(0).getContentSize().x / H.ancho_mm; if (ultimoEN) ponerPin2d(); try { pintarRecorrido(GPSCampo.puntos()); } catch (e) {} });
+  visor2d.addHandler('open', () => { PXMM = visor2d.world.getItemAt(0).getContentSize().x / H.ancho_mm; if (ultimoEN) ponerPin2d(); actualizarEscala(); });
+  visor2d.addHandler('animation', actualizarEscala); visor2d.addHandler('resize', actualizarEscala);
   visor2d.addHandler('open-failed', () => avisar(`No se pudo abrir el plano 2D «${A.plano2d}». Revisa el nombre en config.js.`, 'mal'));
 }
 function cambiar(v){
+  vistaActual = v;
   $('#m-2d').setAttribute('aria-pressed', String(v === '2d')); $('#m-3d').setAttribute('aria-pressed', String(v === '3d'));
   $('#osd').hidden = v !== '2d'; mv.hidden = v !== '3d'; $('#btn-mas').hidden = $('#btn-menos').hidden = v !== '2d';
-  $('#capas').hidden = v !== '3d' || !$('#capas').querySelector('.capa');
-  if (v === '2d') { iniciar2d(); avisar('Plano 2D: acerca con dos dedos o con doble toque para leer las convenciones y el rótulo.'); }
-  else avisar('Maqueta 3D: gira con un dedo y acerca con dos.');
+  $('#bloque-capas').hidden = v !== '3d' || !$('#capas').querySelector('.capa');
+  $('#escala').hidden = v !== '2d';
+  if (v === '2d') { iniciar2d(); girarNorte(0); actualizarEscala(); avisar('Plano 2D, con el norte hacia arriba. Acerca con dos dedos, la rueda o doble clic.'); }
+  else { girarNorte(mv.getCameraOrbit ? mv.getCameraOrbit().theta : 0); avisar('Maqueta 3D: gira con un dedo o con el ratón y acerca con dos dedos o la rueda.'); }
 }
 $('#m-2d').addEventListener('click', () => cambiar('2d'));
 $('#m-3d').addEventListener('click', () => cambiar('3d'));
 $('#btn-mas').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1.6); visor2d.viewport.applyConstraints(); } });
 $('#btn-menos').addEventListener('click', () => { if (visor2d) { visor2d.viewport.zoomBy(1 / 1.6); visor2d.viewport.applyConstraints(); } });
 
+/* ---------- Norte y escala gráfica ---------- */
+// La maqueta va con x al este y z al sur: con theta = 0 la cámara mira al norte; al girar theta, el norte gira lo mismo en pantalla.
+let anguloNorte = 0;
+function girarNorte(rad){ anguloNorte = rad; $('#flecha-norte').style.transform = `rotate(${rad}rad)`; }
+mv.addEventListener('camera-change', () => { if (vistaActual === '3d') girarNorte(mv.getCameraOrbit().theta); });
+let pxPorMetro = null;
+function actualizarEscala(){
+  if (!visor2d || !visor2d.world.getItemAt(0)) return;
+  const im = visor2d.world.getItemAt(0), P = OpenSeadragon.Point;
+  const a = im.imageToViewerElementCoordinates(new P(0, 0)), b = im.imageToViewerElementCoordinates(new P(1000, 0));
+  const pxImg = im.getContentSize().x / (M.E_max - M.E_min);
+  pxPorMetro = (b.x - a.x) / 1000 * pxImg;
+  const largo = escalaRedonda(110 / pxPorMetro);
+  $('#barra-esc').style.width = `${largo * pxPorMetro}px`; $('#txt-esc').textContent = `${largo.toLocaleString('es-CO')} m`;
+}
+function escalaRedonda(m){ const p = Math.pow(10, Math.floor(Math.log10(m))); return [1, 2, 5, 10].map((k) => k * p).filter((v) => v <= m * 1.4).pop() || p; }
+
 /* ---------- Del terreno (E, N) a la maqueta y al plano ---------- */
-let ALT = null;   // mapa de alturas leído de relieve.png
+let ALT = null;
 const altPromesa = new Promise((ok) => {
   const im = new Image(); im.decoding = 'async';
   im.onload = () => { try { const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
@@ -275,7 +391,7 @@ const altPromesa = new Promise((ok) => {
       ALT = {w: c.width, h: c.height, d: x.getImageData(0, 0, c.width, c.height).data}; } catch (e) {} ok(); };
   im.onerror = () => ok(); im.src = R.imagen;
 });
-function nivel(E, N){   // 0 a 1 según el gris del mapa de alturas (interpolación bilineal)
+function nivel(E, N){
   if (!ALT) return 0;
   const fx = (E - M.E_min) / (M.E_max - M.E_min) * (ALT.w - 1), fy = (M.N_max - N) / (M.N_max - M.N_min) * (ALT.h - 1);
   const i = Math.max(0, Math.min(ALT.w - 2, Math.floor(fx))), j = Math.max(0, Math.min(ALT.h - 2, Math.floor(fy))), a = fx - i, b = fy - j;
@@ -283,16 +399,10 @@ function nivel(E, N){   // 0 a 1 según el gris del mapa de alturas (interpolaci
   return (g(i, j) * (1 - a) + g(i + 1, j) * a) * (1 - b) + (g(i, j + 1) * (1 - a) + g(i + 1, j + 1) * a) * b;
 }
 const dentro = (E, N) => E >= M.E_min && E <= M.E_max && N >= M.N_min && N <= M.N_max;
-function enHoja(E, N){ // milímetros en la hoja, medidos desde la esquina superior izquierda
-  return {x: M.x_mm + (E - M.E_min) / (M.E_max - M.E_min) * M.ancho_mm, y: M.y_mm + (M.N_max - N) / (M.N_max - M.N_min) * M.alto_mm};
-}
-function enMaqueta(E, N){ // metros de la maqueta: x al este, y hacia arriba, z al sur; origen en el centro de la hoja
-  if (!dentro(E, N)) return null; const p = enHoja(E, N);
-  return {x: (p.x - H.ancho_mm / 2) / 1000, y: BASE_REL + nivel(E, N) * FUERZA, z: (p.y - H.alto_mm / 2) / 1000};
-}
+function enHoja(E, N){ return {x: M.x_mm + (E - M.E_min) / (M.E_max - M.E_min) * M.ancho_mm, y: M.y_mm + (M.N_max - N) / (M.N_max - M.N_min) * M.alto_mm}; }
+function enMaqueta(E, N){ if (!dentro(E, N)) return null; const p = enHoja(E, N);
+  return {x: (p.x - H.ancho_mm / 2) / 1000, y: BASE_REL + nivel(E, N) * FUERZA, z: (p.y - H.alto_mm / 2) / 1000}; }
 function enPlano(E, N){ if (!dentro(E, N) || !PXMM) return null; const p = enHoja(E, N); return {x: p.x * PXMM, y: p.y * PXMM}; }
-
-/* Transversa de Mercator (sirve para UTM, Origen-Nacional, Gauss-Krüger…) */
 const ELIPSOIDES = {GRS80: [6378137, 1 / 298.257222101], WGS84: [6378137, 1 / 298.257223563], INTERNACIONAL: [6378388, 1 / 297]};
 function aPlanas(lat, lon){
   const P = C.proyeccion, [a, f] = ELIPSOIDES[(P.elipsoide || 'GRS80').toUpperCase()] || ELIPSOIDES.GRS80, r = Math.PI / 180;
@@ -305,7 +415,7 @@ function aPlanas(lat, lon){
           FN + k0 * (Mf(phi) - Mf(lat0) + N * Math.tan(phi) * (A2 * A2 / 2 + (5 - T + 9 * Cc + 4 * Cc * Cc) * A2 ** 4 / 24 + (61 - 58 * T + T * T + 600 * Cc - 330 * ep2) * A2 ** 6 / 720))];
 }
 
-/* ---------- Etiquetas 3D desde los CSV de QGIS ---------- */
+/* ---------- Etiquetas 3D desde CSV de QGIS ---------- */
 function leerCSV(txt){
   txt = txt.replace(/^﻿/, ''); const filas = []; let fila = [], campo = '', comillas = false;
   const sep = (txt.split('\n')[0].split(';').length > txt.split('\n')[0].split(',').length) ? ';' : ',';
@@ -322,7 +432,7 @@ function crearCapa(g, color){
   b.style.setProperty('--c', color); b.innerHTML = '<i></i>'; b.append(g.grupo);
   b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on));
     mv.querySelectorAll(`.et[data-grupo="${CSS.escape(g.grupo)}"]`).forEach((e) => { e.hidden = !on; }); pedirDespeje(); });
-  $('#capas').appendChild(b); $('#capas').hidden = mv.hidden;
+  $('#capas').appendChild(b); $('#bloque-capas').hidden = vistaActual !== '3d';
 }
 let nEt = 0;
 async function cargarEtiquetas(){
@@ -332,7 +442,7 @@ async function cargarEtiquetas(){
       const r = await fetch(g.archivo); if (!r.ok) throw 0; const filas = leerCSV(await r.text()); const cab = filas.shift().map((c) => c.trim());
       const iX = cab.findIndex((c) => c.toUpperCase() === 'X'), iY = cab.findIndex((c) => c.toUpperCase() === 'Y'), iN = cab.indexOf(g.campo);
       if (iX < 0 || iY < 0 || iN < 0) throw 0;
-      const porNombre = new Map();   // un mismo nombre en varios tramos → el punto más central de ese nombre
+      const porNombre = new Map();
       filas.forEach((f) => { const n = (f[iN] || '').trim(), E = parseFloat(f[iX]), N = parseFloat(f[iY]);
         if (!n || !isFinite(E) || !isFinite(N) || !dentro(E, N)) return; (porNombre.get(n) || porNombre.set(n, []).get(n)).push([E, N]); });
       if (!porNombre.size) throw 0;
@@ -342,26 +452,23 @@ async function cargarEtiquetas(){
         const [E, N] = pts.reduce((m, p) => Math.hypot(p[0] - mE, p[1] - mN) < Math.hypot(m[0] - mE, m[1] - mN) ? p : m);
         const q = enMaqueta(E, N), b = document.createElement('button');
         b.className = 'et'; b.slot = `hotspot-et-${nEt++}`; b.dataset.grupo = g.grupo; b.tabIndex = -1; b.style.setProperty('--c', color);
-        if (/^#(f[0-9a-f]|e[89a-f]|ff)/i.test(color)) b.style.setProperty('--t', '#111518');
+        if (/^#(f[0-9a-f]|e[89a-f]|ff)/i.test(color)) b.style.setProperty('--t', '#1c252b');
         b.dataset.position = `${q.x}m ${q.y + 0.003}m ${q.z}m`; b.dataset.normal = '0m 1m 0m'; b.dataset.visibilityAttribute = 'visible';
         const t = document.createElement('span'); t.textContent = n; b.appendChild(t); mv.appendChild(b);
       });
     } catch (e) { malos.push(g.archivo); }
   }
-  if (malos.length) avisar(`No se pudieron leer estas etiquetas: ${malos.join(', ')}. Revisa el nombre del archivo, la columna del nombre (campo) y que el CSV tenga las columnas X e Y.`, 'mal');
+  if (malos.length) avisar(`No se pudieron leer estas etiquetas: ${malos.join(', ')}. Revisa el nombre del archivo, la columna del nombre y que el CSV tenga columnas X e Y.`, 'mal');
   setTimeout(pedirDespeje, 500);
 }
 cargarEtiquetas();
 let despejePendiente = false;
-function despejar(){   // si dos nombres se tapan, el segundo queda como punto hasta que se acerque la vista
+function despejar(){
   despejePendiente = false; const cajas = [];
   const lista = [...mv.querySelectorAll('.et')].filter((e) => !e.hidden && e.hasAttribute('data-visible'));
   lista.forEach((e) => e.classList.remove('sin-texto'));
-  for (const e of lista){
-    const r = e.querySelector('span').getBoundingClientRect(); if (!r.width) continue;
-    if (cajas.some((c) => !(r.right + 2 < c.left || r.left - 2 > c.right || r.bottom + 2 < c.top || r.top - 2 > c.bottom))) e.classList.add('sin-texto');
-    else cajas.push(r);
-  }
+  for (const e of lista){ const r = e.querySelector('span').getBoundingClientRect(); if (!r.width) continue;
+    if (cajas.some((c) => !(r.right + 2 < c.left || r.left - 2 > c.right || r.bottom + 2 < c.top || r.top - 2 > c.bottom))) e.classList.add('sin-texto'); else cajas.push(r); }
 }
 function pedirDespeje(){ if (!despejePendiente){ despejePendiente = true; requestAnimationFrame(() => requestAnimationFrame(despejar)); } }
 mv.addEventListener('camera-change', pedirDespeje); mv.addEventListener('load', () => setTimeout(pedirDespeje, 300));
@@ -369,26 +476,12 @@ addEventListener('resize', pedirDespeje);
 
 /* ---------- Pantalla completa ---------- */
 const btnFull = $('#btn-full');
-let scrollPrevio = 0, sostener = 0;
-function volverAlInicio(){
-  const y = scrollPrevio, ir = () => { if (Math.abs(scrollY - y) > 2) scrollTo({top: y, behavior: 'instant'}); };
-  ir(); requestAnimationFrame(ir);
-  const fin = Date.now() + 2000; sostener = fin;
-  const vigilar = () => { if (sostener !== fin || Date.now() > fin) return; ir(); requestAnimationFrame(vigilar); };
-  requestAnimationFrame(vigilar);
-  mv.cameraOrbit = mv.getAttribute('camera-orbit'); mv.cameraTarget = 'auto auto auto'; mv.fieldOfView = mv.getAttribute('field-of-view'); mv.jumpCameraToGoal();
-  if (visor2d) setTimeout(() => visor2d.viewport.goHome(true), 200);
-  setTimeout(pedirDespeje, 300);
-}
-['touchstart', 'wheel', 'keydown'].forEach((ev) => addEventListener(ev, (e) => { if (!stage.contains(e.target)) sostener = 0; }, {passive: true}));
 function marcarFull(on){
-  const antes = stage.classList.contains('full'), hueco = $('#hueco');
-  if (on && !antes){ scrollPrevio = scrollY; hueco.style.height = stage.offsetHeight + 'px'; hueco.hidden = false; }
   stage.classList.toggle('full', on); document.body.classList.toggle('bloqueo', on);
-  if (!on && antes){ hueco.hidden = true; volverAlInicio(); }
   btnFull.setAttribute('aria-pressed', String(on)); btnFull.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
   $('#ico-full').innerHTML = on ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
   mv.setAttribute('touch-action', on ? 'none' : 'pan-y');
+  setTimeout(() => { pedirDespeje(); actualizarEscala(); }, 200);
 }
 btnFull.addEventListener('click', async () => {
   const on = !stage.classList.contains('full'); marcarFull(on);
@@ -396,6 +489,7 @@ btnFull.addEventListener('click', async () => {
         else if (!on && document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
 });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && stage.classList.contains('full')) marcarFull(false); });
+function salirDeFull(){ if (stage.classList.contains('full')) marcarFull(false); if (document.fullscreenElement) { try { document.exitFullscreen().catch(() => {}); } catch (e) {} } }
 
 /* ---------- GPS ---------- */
 let posModelo = null, posPlano = null, ultimoEN = null, vigilancia = null;
@@ -409,64 +503,33 @@ function ponerPin2d(){
   else { visor2d.addOverlay({element: el, location: p, placement: OpenSeadragon.Placement.CENTER}); overlay2d = true; }
 }
 function distanciaKm(E, N){ const dx = Math.max(M.E_min - E, 0, E - M.E_max), dy = Math.max(M.N_min - N, 0, N - M.N_max); return Math.hypot(dx, dy) / 1000; }
-let viejaTxt = '';
-function mmss(s){ s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
-function alPosicion(p, info){
-  const vieja = !!(info && info.vieja); if (!vieja) viejaTxt = '';
+function alPosicion(p){
   const [E, N] = aPlanas(p.coords.latitude, p.coords.longitude); ultimoEN = [E, N];
   const prec = Math.round(p.coords.accuracy || 0);
   posModelo = enMaqueta(E, N); posPlano = enPlano(E, N);
-  $('#yo').classList.toggle('vieja', vieja); $('#yo2d').classList.toggle('vieja', vieja);
   if (posModelo){ mv.updateHotspot({name: 'hotspot-yo', position: `${posModelo.x}m ${posModelo.y + 0.002}m ${posModelo.z}m`}); $('#yo').hidden = false; }
   else $('#yo').hidden = true;
   ponerPin2d();
-  const donde = `E ${Math.round(E).toLocaleString('es-CO')} · N ${Math.round(N).toLocaleString('es-CO')}`;
-  if (vieja){
-    const hace = Math.max(0, Math.round((Date.now() - p.timestamp) / 60000));
-    viejaTxt = `Última posición conocida (${hace < 1 ? 'hace un momento' : `hace ${hace} min`}, ±${prec} m): ${donde}. `;
-    avisar(viejaTxt + 'Buscando satélites para actualizarla…');
-  } else if (!dentro(E, N)) avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
-  else if (prec > 100) avisar(`Posición aproximada (±${prec} m): ${donde}. Afinando con los satélites…`);
-  else avisar(`Usted está aquí: ${donde} (±${prec} m).`, 'ok');
+  if (dentro(E, N)) avisar(`Usted está aquí: E ${Math.round(E).toLocaleString('es-CO')}, N ${Math.round(N).toLocaleString('es-CO')} (±${prec} m).`, 'ok');
+  else avisar(`Estás fuera del área del plano, a unos ${distanciaKm(E, N).toFixed(1).replace('.', ',')} km del borde.`);
   if (window.__pinAR) window.__pinAR();
 }
-function alEsperar(s){
-  avisar(viejaTxt + `Buscando satélites… ${mmss(s)}. Sin internet la primera señal tarda más (de 1 a 5 minutos): sal al aire libre y deja el celular quieto unos instantes.`
-    + (s > 150 ? ' Si no llega, revisa que Chrome tenga activada la «ubicación precisa» (Ajustes → Aplicaciones → Chrome → Permisos → Ubicación).' : ''));
-}
-function alPerder(s){ avisar(`Sin señal de satélites hace ${mmss(s)} (bajo techo, árboles densos o un cañón). Se sigue buscando` + (FX.recorrido ? '; el recorrido continúa al volver la señal.' : '.')); }
-function alError(e){
-  avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador (y activa la «ubicación precisa»).'
-       : e.code === 0 ? 'Este navegador no permite usar la ubicación.' : 'Todavía no hay señal de GPS. Se sigue buscando.');
-  $('#btn-gps').setAttribute('aria-pressed', 'false'); $('#xr-gps').setAttribute('aria-pressed', 'false');
-}
-function aPxPlano(lat, lon){ return enPlano(...aPlanas(lat, lon)); }
-function pintarRecorrido(pts){
-  if (!FX.recorrido){ $('#recorrido').hidden = true; return; }
-  $('#recorrido').hidden = !pts.length;
-  const m = GPSCampo.longitud(); $('#rec-largo').textContent = m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(2).replace('.', ',')} km`;
-  $('#rec-n').textContent = pts.length.toLocaleString('es-CO');
-  if (visor2d && visor2d.world.getItemAt(0)){ const t = visor2d.world.getItemAt(0).getContentSize(); GPSCampo.dibujar2d(visor2d, aPxPlano, t.x, t.y); }
-}
-try { pintarRecorrido(GPSCampo.puntos()); } catch (e) { /* el GPS nunca debe frenar la maqueta */ }
-$('#rec-gpx').addEventListener('click', () => GPSCampo.descargar(document.title));
-$('#rec-borrar').addEventListener('click', () => { if (confirm('¿Borrar el recorrido guardado en este celular?')) GPSCampo.borrar(); });
-// Prueba sin salir a campo: …/index.html?prueba=6.2105,-73.8133 simula esa posición al tocar el botón de ubicación
+function alError(e){ avisar(e.code === 1 ? 'Para marcar tu ubicación, permite el acceso a la ubicación en el navegador.' : 'Todavía no hay señal de GPS. Si estás bajo techo, sal al aire libre.'); }
 const PRUEBA = (new URLSearchParams(location.search).get('prueba') || '').split(',').map(Number);
 async function gps(on){
   $('#btn-gps').setAttribute('aria-pressed', String(on)); $('#xr-gps').setAttribute('aria-pressed', String(on));
-  if (!on){ GPSCampo.detener(); posModelo = null; posPlano = null; ultimoEN = null;
-    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar(FX.recorrido ? 'Ubicación desactivada. El recorrido queda guardado en este celular.' : 'Ubicación desactivada.'); return; }
+  if (!on){ if (vigilancia !== null) navigator.geolocation.clearWatch(vigilancia); vigilancia = null; posModelo = null; posPlano = null; ultimoEN = null;
+    $('#yo').hidden = true; ponerPin2d(); if (window.__pinAR) window.__pinAR(); avisar('Ubicación desactivada.'); return; }
   await altPromesa;
-  if (PRUEBA.length === 2 && PRUEBA.every(isFinite)) { alPosicion({coords: {latitude: PRUEBA[0], longitude: PRUEBA[1], accuracy: 0}, timestamp: Date.now()}); return; }
-  viejaTxt = ''; avisar('Buscando tu posición con el GPS (funciona sin internet)…');
-  GPSCampo.iniciar({posicion: alPosicion, esperando: alEsperar, perdida: alPerder, error: alError, recorrido: pintarRecorrido, guardar: FX.recorrido});
+  if (PRUEBA.length === 2 && PRUEBA.every(isFinite)) { alPosicion({coords: {latitude: PRUEBA[0], longitude: PRUEBA[1], accuracy: 0}}); return; }
+  if (!('geolocation' in navigator)){ avisar('Este navegador no permite usar la ubicación.'); return; }
+  avisar('Buscando tu posición con el GPS…');
+  vigilancia = navigator.geolocation.watchPosition(alPosicion, alError, {enableHighAccuracy: true, maximumAge: 5000, timeout: 30000});
 }
-if (!FX.gps){ $('#btn-gps').hidden = true; $('#xr-gps').hidden = true; }
 $('#btn-gps').addEventListener('click', () => gps($('#btn-gps').getAttribute('aria-pressed') !== 'true'));
 $('#xr-gps').addEventListener('click', () => gps($('#xr-gps').getAttribute('aria-pressed') !== 'true'));
 
-/* ---------- Ver en tu espacio ---------- */
+/* ---------- Realidad aumentada ---------- */
 function cargarScript(src, attrs){ return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src;
   Object.entries(attrs || {}).forEach(([k, v]) => s.setAttribute(k, v)); s.onload = ok; s.onerror = mal; document.head.appendChild(s); }); }
 async function cargarMotor(){
@@ -503,8 +566,7 @@ function escenaRA(){
       const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.007, 16, 12), new THREE.MeshBasicMaterial({color: 0xd2382b}));
       cabeza.position.y = 0.037; pin.add(cabeza); pin.visible = false; soporte.add(pin); window.__pinAR();
       estado.textContent = 'Cargando la maqueta…';
-      new THREE.GLTFLoader().load(A.modelo, (g) => { soporte.add(g.scene);
-        if (!colocado) estado.textContent = 'Apunta al piso y mueve el celular despacio de lado a lado…'; },
+      new THREE.GLTFLoader().load(A.modelo, (g) => { soporte.add(g.scene); if (!colocado) estado.textContent = 'Apunta al piso y mueve el celular despacio de lado a lado…'; },
         undefined, () => { estado.textContent = 'No se pudo cargar la maqueta.'; });
       const piso = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), rayo = new THREE.Raycaster(), v = new THREE.Vector2();
       const lienzo = $('#camerafeed'); let x0 = null, giro0 = 0, movio = false;
@@ -523,8 +585,7 @@ function escenaRA(){
     onCameraStatusChange: (ev) => { if (ev.status === 'failed') estado.textContent = 'No se pudo abrir la cámara. Revisa los permisos del navegador.'; },
   };
 }
-function ajustarLienzo(){ const c = $('#camerafeed'), dpr = Math.min(devicePixelRatio || 1, 2);
-  c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); }
+function ajustarLienzo(){ const c = $('#camerafeed'), dpr = Math.min(devicePixelRatio || 1, 2); c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); }
 async function raNavegador(){
   const permisos = [];
   if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) permisos.push(DeviceMotionEvent.requestPermission().catch(() => {}));
@@ -545,37 +606,232 @@ $('#xr-salir').addEventListener('click', () => {
   enRA = false; window.__pinAR = null; removeEventListener('resize', ajustarLienzo);
   $('#xr').hidden = true; document.body.classList.remove('bloqueo'); mv.setAttribute('src', A.modelo);
 });
-// RA nativa solo en iPhone/iPad (Quick Look) o Android con ARCore (WebXR); en los demás, motor en el navegador
 const ES_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let XR_NATIVO = false;
 if (navigator.xr && navigator.xr.isSessionSupported) navigator.xr.isSessionSupported('immersive-ar').then((v) => { XR_NATIVO = v; }).catch(() => {});
-function salirDeFull(){
-  if (stage.classList.contains('full')) marcarFull(false);
-  if (document.fullscreenElement) { try { document.exitFullscreen().catch(() => {}); } catch (e) {} }
-}
 $('#btn-ra').addEventListener('click', () => {
+  registrar('realidad aumentada');
   if (MODO === 'auto' && (ES_IOS || XR_NATIVO) && mv.canActivateAR) { salirDeFull(); mv.activateAR(); return; }
   raNavegador();
 });
-if (FX.sin_internet && ES_IOS && A.modelo_iphone) { $('#dl-usdz').hidden = false;
-  $('#dl-usdz').title = 'Guárdalo en Archivos y ábrelo desde allí para ponerlo en tu espacio aunque no tengas conexión'; }
+if (ES_IOS && A.modelo_iphone) $('#dl-usdz').hidden = false;
+// El botón de realidad aumentada solo tiene sentido en celulares y tabletas
+if (ES_IOS || navigator.maxTouchPoints > 0 || matchMedia('(any-pointer: coarse)').matches) $('#btn-ra').hidden = false;
+
+/* ---------- Modo anotación ---------- */
+const lz = $('#lz'), cx = lz.getContext('2d'), zona = $('#an-zona'), cajaTexto = $('#lz-texto');
+let fondo = null, trazos = [], actual = null, herramienta = 'lapiz', color = '#d32f2f', grosor = 6, vistaCapturada = '3d', nortePeso = 0, metrosPorPx = null;
+function ajustarLienzoAn(){
+  if (!fondo) return;
+  const W = zona.clientWidth - 24, Hh = zona.clientHeight - 24, k = Math.min(W / fondo.width, Hh / fondo.height, 1.5);
+  lz.style.width = `${Math.floor(fondo.width * k)}px`; lz.style.height = `${Math.floor(fondo.height * k)}px`;
+}
+const razon = () => lz.width / lz.getBoundingClientRect().width;
+function aLienzo(e){ const r = lz.getBoundingClientRect(), k = lz.width / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; }
+function dibujar(t, c = cx){
+  c.save(); c.strokeStyle = c.fillStyle = t.c; c.lineWidth = t.w; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.shadowColor = t.c === '#ffffff' ? 'rgb(0 0 0 / .6)' : 'rgb(255 255 255 / .85)'; c.shadowBlur = t.w * 0.9;
+  if (t.t === 'lapiz'){ c.beginPath(); t.p.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); if (t.p.length === 1) c.lineTo(t.p[0][0] + 0.1, t.p[0][1]); c.stroke(); }
+  else if (t.t === 'flecha'){ const [x0, y0] = t.a, [x1, y1] = t.b, ang = Math.atan2(y1 - y0, x1 - x0), L = t.w * 4.5;
+    c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x1 - L * Math.cos(ang - 0.45), y1 - L * Math.sin(ang - 0.45)); c.lineTo(x1 - L * Math.cos(ang + 0.45), y1 - L * Math.sin(ang + 0.45)); c.closePath(); c.fill(); }
+  else if (t.t === 'circulo'){ const [x0, y0] = t.a, [x1, y1] = t.b; c.beginPath(); c.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2 + 0.1, Math.abs(y1 - y0) / 2 + 0.1, 0, 0, 2 * Math.PI); c.stroke(); }
+  else if (t.t === 'texto'){ c.font = `600 ${t.s}px "IBM Plex Sans", system-ui, sans-serif`; c.textBaseline = 'middle';
+    c.shadowBlur = 0; c.lineWidth = t.s * 0.22; c.strokeStyle = t.c === '#ffffff' ? '#1c252b' : '#ffffff'; c.strokeText(t.txt, t.x, t.y); c.fillText(t.txt, t.x, t.y); }
+  c.restore();
+}
+function redibujar(){ cx.clearRect(0, 0, lz.width, lz.height); if (fondo) cx.drawImage(fondo, 0, 0); trazos.forEach((t) => dibujar(t)); if (actual) dibujar(actual); }
+lz.addEventListener('pointerdown', (e) => {
+  if (herramienta === 'texto') return;
+  e.preventDefault(); lz.setPointerCapture(e.pointerId); const p = aLienzo(e), w = grosor * razon();
+  actual = herramienta === 'lapiz' ? {t: 'lapiz', c: color, w, p: [p]} : {t: herramienta, c: color, w, a: p, b: p}; redibujar();
+});
+lz.addEventListener('pointermove', (e) => { if (!actual) return; const p = aLienzo(e); if (actual.t === 'lapiz') actual.p.push(p); else actual.b = p; redibujar(); });
+function terminarTrazo(){ if (!actual) return; trazos.push(actual); actual = null; redibujar(); }
+lz.addEventListener('pointerup', terminarTrazo); lz.addEventListener('pointercancel', terminarTrazo);
+let textoEn = null;
+lz.addEventListener('click', (e) => {
+  if (herramienta !== 'texto') return;
+  const r = lz.getBoundingClientRect(), z = zona.getBoundingClientRect(); textoEn = aLienzo(e);
+  cajaTexto.hidden = false; cajaTexto.value = ''; cajaTexto.style.left = `${e.clientX - z.left}px`; cajaTexto.style.top = `${e.clientY - z.top - 18}px`;
+  cajaTexto.style.color = color; cajaTexto.focus();
+});
+function fijarTexto(){ if (cajaTexto.hidden) return; const s = cajaTexto.value.trim(); cajaTexto.hidden = true;
+  if (s && textoEn) { trazos.push({t: 'texto', c: color, s: 22 * razon(), x: textoEn[0], y: textoEn[1], txt: s}); redibujar(); } textoEn = null; }
+cajaTexto.addEventListener('keydown', (e) => { if (e.key === 'Enter') fijarTexto(); if (e.key === 'Escape') { cajaTexto.hidden = true; textoEn = null; } });
+cajaTexto.addEventListener('blur', fijarTexto);
+document.querySelectorAll('.herr-an[data-h]').forEach((b) => b.addEventListener('click', () => {
+  herramienta = b.dataset.h; document.querySelectorAll('.herr-an[data-h]').forEach((o) => o.setAttribute('aria-pressed', String(o === b))); }));
+document.querySelectorAll('.color').forEach((b) => b.addEventListener('click', () => {
+  color = b.dataset.c; document.querySelectorAll('.color').forEach((o) => o.setAttribute('aria-pressed', String(o === b))); }));
+document.querySelectorAll('.herr-an[data-g]').forEach((b) => b.addEventListener('click', () => {
+  grosor = +b.dataset.g; document.querySelectorAll('.herr-an[data-g]').forEach((o) => o.setAttribute('aria-pressed', String(o === b))); }));
+$('#an-deshacer').addEventListener('click', () => { trazos.pop(); redibujar(); });
+$('#an-limpiar').addEventListener('click', () => { trazos = []; redibujar(); });
+
+async function capturar(){
+  if (vistaActual === '2d' && visor2d && visor2d.drawer && visor2d.drawer.canvas) {
+    const src = visor2d.drawer.canvas, c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+    const x = c.getContext('2d'); x.fillStyle = '#f4f6f7'; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0);
+    metrosPorPx = pxPorMetro ? 1 / (pxPorMetro * (src.width / $('#osd').clientWidth)) : null; return c;
+  }
+  metrosPorPx = null;
+  const blob = await mv.toBlob({mimeType: 'image/png', idealAspect: false});
+  const bmp = await createImageBitmap(blob), c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+  const x = c.getContext('2d'); x.fillStyle = getComputedStyle(stage).backgroundColor; x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, 0, 0); return c;
+}
+async function abrirAnotacion(){
+  try {
+    avisar('Preparando la vista para anotar…');
+    fondo = await capturar(); vistaCapturada = vistaActual; nortePeso = vistaActual === '3d' ? anguloNorte : 0;
+    salirDeFull();
+    lz.width = fondo.width; lz.height = fondo.height; trazos = []; actual = null;
+    $('#anota').hidden = false; document.body.classList.add('bloqueo');
+    requestAnimationFrame(() => { ajustarLienzoAn(); redibujar(); });
+    avisar('Vista lista para anotar.');
+    if (navigator.canShare && navigator.canShare({files: [new File([''], 'a.png', {type: 'image/png'})]})) $('#an-compartir').hidden = false;
+  } catch (e) { avisar('No se pudo capturar la vista. Espera a que la maqueta termine de cargar e inténtalo de nuevo.', 'mal'); }
+}
+$('#btn-anotar').addEventListener('click', abrirAnotacion);
+$('#an-cerrar').addEventListener('click', () => { $('#anota').hidden = true; document.body.classList.remove('bloqueo'); cajaTexto.hidden = true; });
+addEventListener('resize', () => { if (!$('#anota').hidden) ajustarLienzoAn(); });
+
+function flechaNorte(x, cxN, cyN, r, ang){
+  x.save(); x.translate(cxN, cyN);
+  x.fillStyle = '#ffffff'; x.strokeStyle = '#1c252b'; x.lineWidth = r * 0.05; x.beginPath(); x.arc(0, 0, r, 0, 2 * Math.PI); x.fill(); x.stroke();
+  x.rotate(ang); x.fillStyle = '#1c252b';
+  x.beginPath(); x.moveTo(0, -r * 0.8); x.lineTo(r * 0.33, r * 0.2); x.lineTo(0, 0); x.lineTo(-r * 0.33, r * 0.2); x.closePath(); x.fill();
+  x.beginPath(); x.moveTo(0, 0); x.lineTo(r * 0.33, r * 0.2); x.lineTo(0, r * 0.8); x.lineTo(-r * 0.33, r * 0.2); x.closePath(); x.lineWidth = r * 0.04; x.stroke();
+  x.rotate(-ang); x.font = `600 ${r * 0.42}px "IBM Plex Sans Condensed", system-ui`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const lx = Math.sin(ang) * r * 1.35, ly = -Math.cos(ang) * r * 1.35; x.lineWidth = r * 0.12; x.strokeStyle = '#fff'; x.strokeText('N', lx, ly); x.fillText('N', lx, ly);
+  x.restore();
+}
+function partir(x, txt, ancho){ const pal = txt.split(/\s+/), lin = []; let l = '';
+  pal.forEach((p) => { const t = l ? l + ' ' + p : p; if (x.measureText(t).width > ancho && l) { lin.push(l); l = p; } else l = t; }); if (l) lin.push(l); return lin; }
+function componer(){
+  const W = fondo.width, u = W / 1000, banda = Math.round(Math.max(150, 150 * u)), c = document.createElement('canvas');
+  c.width = W; c.height = fondo.height + banda; const x = c.getContext('2d');
+  x.drawImage(lz, 0, 0);
+  // Marco y norte sobre la vista
+  x.strokeStyle = 'rgb(28 37 43 / .45)'; x.lineWidth = Math.max(1, 1.2 * u); x.strokeRect(10 * u, 10 * u, W - 20 * u, fondo.height - 20 * u);
+  flechaNorte(x, 52 * u, 58 * u, 26 * u, nortePeso);
+  if (vistaCapturada === '2d' && metrosPorPx){
+    const largo = escalaRedonda(140 * u * metrosPorPx), px = largo / metrosPorPx, x0 = 26 * u, y0 = fondo.height - 30 * u;
+    x.fillStyle = 'rgb(255 255 255 / .92)'; x.fillRect(x0 - 8 * u, y0 - 30 * u, px + 16 * u, 44 * u);
+    x.fillStyle = '#1c252b'; x.fillRect(x0, y0 - 8 * u, px / 2, 8 * u); x.strokeStyle = '#1c252b'; x.lineWidth = 1.2 * u; x.strokeRect(x0, y0 - 8 * u, px, 8 * u);
+    x.font = `500 ${13 * u}px "IBM Plex Sans", system-ui`; x.textBaseline = 'alphabetic'; x.fillText(`0`, x0 - 3 * u, y0 - 14 * u); x.textAlign = 'right'; x.fillText(`${largo.toLocaleString('es-CO')} m`, x0 + px + 4 * u, y0 - 14 * u); x.textAlign = 'left';
+  }
+  // Rótulo inferior
+  const y = fondo.height; x.fillStyle = '#ffffff'; x.fillRect(0, y, W, banda);
+  x.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--azul').trim() || '#014f7d'; x.fillRect(0, y, W, 5 * u);
+  x.strokeStyle = '#c4cdd3'; x.lineWidth = Math.max(1, u);
+  const pad = 22 * u, col1 = W * 0.2, col3 = W * 0.27; let xx = pad;
+  if (LOGO && LOGO.complete && LOGO.naturalWidth){ const h = banda * 0.42, w = Math.min(col1 - 2 * pad, LOGO.naturalWidth * h / LOGO.naturalHeight);
+    x.drawImage(LOGO, xx, y + (banda - w * LOGO.naturalHeight / LOGO.naturalWidth) / 2, w, w * LOGO.naturalHeight / LOGO.naturalWidth); }
+  x.beginPath(); x.moveTo(col1, y + 18 * u); x.lineTo(col1, y + banda - 16 * u); x.moveTo(W - col3, y + 18 * u); x.lineTo(W - col3, y + banda - 16 * u); x.stroke();
+  xx = col1 + pad; const anchoCentro = W - col3 - col1 - 2 * pad;
+  x.fillStyle = '#1c252b'; x.textBaseline = 'top'; x.font = `600 ${24 * u}px "IBM Plex Sans Condensed", system-ui`; x.fillText(C.titulo, xx, y + 22 * u, anchoCentro);
+  x.fillStyle = '#56626b'; x.font = `400 ${14 * u}px "IBM Plex Sans", system-ui`; x.fillText(C.subtitulo || '', xx, y + 54 * u, anchoCentro);
+  const nota = $('#an-nota').value.trim();
+  if (nota){ x.fillStyle = '#1c252b'; x.font = `500 ${16 * u}px "IBM Plex Sans", system-ui`; partir(x, `Nota: ${nota}`, anchoCentro).slice(0, 3).forEach((l, i) => x.fillText(l, xx, y + 82 * u + i * 21 * u)); }
+  const ahora = new Date(), fecha = ahora.toLocaleDateString('es-CO', {day: 'numeric', month: 'long', year: 'numeric'}), hora = ahora.toLocaleTimeString('es-CO', {hour: '2-digit', minute: '2-digit'});
+  xx = W - col3 + pad; x.textBaseline = 'top';
+  const filas = [['Fecha', `${fecha}, ${hora}`], ['Vista', vistaCapturada === '2d' ? 'Plano 2D, norte arriba' : 'Maqueta 3D en perspectiva, sin escala'], ['Elaboró', (C.elaboro && C.elaboro.nombre) || ''], ['Revisó', REVISOR ? [REVISOR.nombre, REVISOR.entidad].filter(Boolean).join(', ') : '']].filter(([k, v]) => v);
+  filas.forEach(([k, v], i) => { const yy = y + 16 * u + i * 33 * u; x.fillStyle = '#56626b'; x.font = `400 ${12 * u}px "IBM Plex Sans", system-ui`; x.fillText(k, xx, yy);
+    x.fillStyle = '#1c252b'; x.font = `500 ${14 * u}px "IBM Plex Sans", system-ui`; x.fillText(v, xx, yy + 15 * u, col3 - 2 * pad); });
+  return c;
+}
+function nombreArchivo(){ const d = new Date(), z = (n) => String(n).padStart(2, '0');
+  const base = (C.titulo || 'vista').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return `${base}_anotacion_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}.png`; }
+const aBlob = (c) => new Promise((ok) => c.toBlob(ok, 'image/png'));
+$('#an-descargar').addEventListener('click', async () => { fijarTexto(); registrar('anotación descargada', {nota: $('#an-nota').value.trim(), vista: vistaCapturada}); const b = await aBlob(componer()), u = URL.createObjectURL(b), a = document.createElement('a');
+  a.href = u; a.download = nombreArchivo(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); });
+$('#an-compartir').addEventListener('click', async () => { fijarTexto(); registrar('anotación compartida', {nota: $('#an-nota').value.trim(), vista: vistaCapturada}); const b = await aBlob(componer()), f = new File([b], nombreArchivo(), {type: 'image/png'});
+  try { await navigator.share({files: [f], title: C.titulo, text: $('#an-nota').value.trim() || C.titulo}); } catch (e) {} });
+$('#an-imprimir').addEventListener('click', async () => { fijarTexto(); registrar('anotación impresa', {nota: $('#an-nota').value.trim(), vista: vistaCapturada}); const b = await aBlob(componer()), u = URL.createObjectURL(b), img = $('#imp-img');
+  img.onload = () => { document.body.classList.add('imprimiendo'); setTimeout(() => { window.print(); document.body.classList.remove('imprimiendo'); URL.revokeObjectURL(u); }, 100); }; img.src = u; });
+
+
+/* ---------- Registro de quién revisa (opcional: config.js → registro.url) ---------- */
+const REG = C.registro || {}, CLAVE = 'vidalrb-revisor', COLA = 'vidalrb-registro-pendiente';
+const leer = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let REVISOR = leer(CLAVE, null);
+const SESION = (() => { try { let s = sessionStorage.getItem('vidalrb-sesion'); if (!s) { s = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('vidalrb-sesion', s); } return s; }
+  catch (e) { return Math.random().toString(36).slice(2, 10); } })();
+function equipo(){
+  const ua = navigator.userAgent;
+  const tipo = /iPad|Tablet/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'tableta' : (/Mobi|Android|iPhone/i.test(ua) ? 'celular' : 'computador');
+  const so = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'otro';
+  const nav = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'otro';
+  return {tipo, so, nav};
+}
+function registrar(evento, extra){
+  const e = equipo(), ahora = new Date();
+  const fila = Object.assign({proyecto: C.titulo, evento, nombre: REVISOR ? REVISOR.nombre : '', entidad: REVISOR ? REVISOR.entidad : '',
+    fecha: ahora.toISOString(), fecha_local: ahora.toLocaleString('es-CO'), vista: vistaActual === '2d' ? 'plano 2D' : 'maqueta 3D', nota: '',
+    dispositivo: `${e.tipo} · ${e.so}`, navegador: e.nav, pantalla: `${screen.width}×${screen.height}`,
+    zona: (Intl.DateTimeFormat().resolvedOptions().timeZone) || '', sesion: SESION, pagina: location.href.split('#')[0], sin_internet: !navigator.onLine}, extra || {});
+  if (fila.vista === '2d') fila.vista = 'plano 2D'; else if (fila.vista === '3d') fila.vista = 'maqueta 3D';
+  const cola = leer(COLA, []); cola.push(fila); guardar(COLA, cola.slice(-300)); enviarCola();
+}
+let enviando = false;
+async function enviarCola(){
+  if (!REG.url || enviando || !navigator.onLine) return;
+  enviando = true;
+  try {
+    let cola = leer(COLA, []);
+    while (cola.length) {
+      // text/plain evita la consulta previa de CORS; Google Apps Script lee el JSON del cuerpo
+      await fetch(REG.url, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify(cola[0])});
+      cola.shift(); guardar(COLA, cola);
+    }
+  } catch (e) {} finally { enviando = false; }
+}
+addEventListener('online', enviarCola);
+function mostrarRevisor(){
+  $('#bloque-revisor').hidden = !REVISOR;
+  if (REVISOR) $('#revisor-nombre').textContent = [REVISOR.nombre, REVISOR.entidad].filter(Boolean).join(' · ');
+}
+function pedirNombre(){
+  if (C.pie && C.pie.logo) { $('#q-logo').src = C.pie.logo; $('#q-logo').hidden = false; }
+  if (REVISOR) { $('#q-nombre').value = REVISOR.nombre || ''; $('#q-entidad').value = REVISOR.entidad || ''; }
+  $('#quien').hidden = false; document.body.classList.add('bloqueo'); setTimeout(() => $('#q-nombre').focus(), 50);
+}
+$('#q-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const nombre = $('#q-nombre').value.replace(/\s+/g, ' ').trim(), entidad = $('#q-entidad').value.replace(/\s+/g, ' ').trim();
+  if (!nombre) { $('#q-nombre').focus(); return; }
+  const cambio = REVISOR && REVISOR.nombre !== nombre;
+  REVISOR = {nombre, entidad}; guardar(CLAVE, REVISOR);
+  $('#quien').hidden = true; document.body.classList.remove('bloqueo'); mostrarRevisor();
+  registrar(cambio ? 'cambio de revisor' : 'entrada');
+  try { sessionStorage.setItem('vidalrb-entrada', '1'); } catch (e) {}
+});
+$('#btn-revisor').addEventListener('click', pedirNombre);
+if (REG.pedir_nombre !== false && !REVISOR) pedirNombre();
+else {
+  mostrarRevisor();
+  let ya = false; try { ya = sessionStorage.getItem('vidalrb-entrada') === '1'; sessionStorage.setItem('vidalrb-entrada', '1'); } catch (e) {}
+  if (!ya) registrar('entrada');
+}
+enviarCola();
 
 /* ---------- Sin internet ---------- */
-const btnOff = $('#btn-offline'), MARCA = `vidalrb-marca-v${C.version}`;
+const btnOff = $('#btn-offline'), MARCA = `vidalrb2-marca-v${C.version}`;
 function marcarGuardado(fechaIso){
   const f = fechaIso ? new Date(fechaIso).toLocaleDateString('es-CO', {day: 'numeric', month: 'short'}) : '';
   btnOff.textContent = `Guardado${f ? ' el ' + f : ''}: disponible sin internet ✓`; btnOff.disabled = true;
 }
-async function revisarGuardado(){
-  try { const r = await caches.match(MARCA); if (r) marcarGuardado(await r.text()); } catch (e) {}
-}
-if (FX.sin_internet && 'serviceWorker' in navigator && 'caches' in window && location.protocol !== 'file:'){
+async function revisarGuardado(){ try { const r = await caches.match(MARCA); if (r) marcarGuardado(await r.text()); } catch (e) {} }
+if ('serviceWorker' in navigator && 'caches' in window && location.protocol !== 'file:'){
   navigator.serviceWorker.register('sw.js').catch(() => {});
   revisarGuardado(); navigator.serviceWorker.ready.then(() => setTimeout(revisarGuardado, 800));
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data === 'guardado'){ marcarGuardado(new Date().toISOString()); avisar('Listo. La próxima vez esta página abre aunque no tengas conexión.', 'ok'); }
     if (typeof e.data === 'string' && e.data.startsWith('error')){ btnOff.disabled = false; btnOff.textContent = 'Guardar para usar sin internet';
-      const det = e.data.slice(6); avisar(det && !/fetch|network/i.test(det) ? `No se pudo guardar: faltan estos archivos en la carpeta publicada: ${det}.` : 'No se pudo guardar todo. Inténtalo de nuevo con buena conexión.', 'mal'); }
+      const det = e.data.slice(6); avisar(det && !/fetch|network/i.test(det) ? `No se pudo guardar: faltan estos archivos: ${det}.` : 'No se pudo guardar todo. Inténtalo de nuevo con buena conexión.', 'mal'); }
   });
   btnOff.addEventListener('click', async () => {
     btnOff.disabled = true; btnOff.textContent = 'Guardando… (puede tardar unos minutos, no cierres la página)';
@@ -583,10 +839,10 @@ if (FX.sin_internet && 'serviceWorker' in navigator && 'caches' in window && loc
   });
 } else { btnOff.hidden = true; }
 let pedidoInstalar = null;
-addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); if (!FX.instalar) return; pedidoInstalar = e; $('#btn-instalar').hidden = false; });
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; $('#btn-instalar').hidden = false; });
 $('#btn-instalar').addEventListener('click', async () => { if (!pedidoInstalar) return; pedidoInstalar.prompt();
   const r = await pedidoInstalar.userChoice; pedidoInstalar = null; $('#btn-instalar').hidden = true;
-  if (r.outcome === 'accepted') avisar('Listo: abre el plano desde el ícono de tu pantalla principal, también sin internet.', 'ok'); });
+  if (r.outcome === 'accepted') avisar('Listo: abre el visor desde el ícono de tu pantalla principal, también sin internet.', 'ok'); });
 </script>
 </body>
 </html>
